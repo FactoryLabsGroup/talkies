@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Talkies</title>
+  <meta name="description" content="Meet a stranger. Earn your words. Every chat starts as a silent film.">
+  <meta name="theme-color" content="#FFF4E2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15120F" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="Talkies">
+  <meta property="og:description" content="Meet a stranger. Earn your words.">
+  <meta property="og:url" content="https://factorylabs.app/talkies/">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Noto+Sans+Georgian:wght@500;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body data-screen="landing">
+<main id="app">
+
+  <!-- Landing -->
+  <section id="landing" class="screen">
+    <button id="langBtn" class="lang" type="button"></button>
+    <div class="hero">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M10 8h44a6 6 0 0 1 6 6v28a6 6 0 0 1-6 6H30l-12 10V48h-8a6 6 0 0 1-6-6V14a6 6 0 0 1 6-6z" fill="var(--coral)" stroke="var(--line-strong)" stroke-width="3" stroke-linejoin="round"/>
+        <g fill="var(--paper)"><rect x="11" y="12" width="5" height="4" rx="1"/><rect x="21" y="12" width="5" height="4" rx="1"/><rect x="31" y="12" width="5" height="4" rx="1"/><rect x="41" y="12" width="5" height="4" rx="1"/><rect x="51" y="12" width="4" height="4" rx="1"/>
+        <rect x="11" y="40" width="5" height="4" rx="1"/><rect x="21" y="40" width="5" height="4" rx="1"/><rect x="31" y="40" width="5" height="4" rx="1"/><rect x="41" y="40" width="5" height="4" rx="1"/><rect x="51" y="40" width="4" height="4" rx="1"/></g>
+        <g fill="var(--line-strong)" class="dots"><circle cx="22" cy="28" r="3.5"/><circle cx="32" cy="28" r="3.5"/><circle cx="42" cy="28" r="3.5"/></g>
+      </svg>
+      <h1 class="wordmark">talkies</h1>
+      <p class="tagline" data-i="tagline"></p>
+      <p class="sub" data-i="sub"></p>
+    </div>
+    <div class="cta">
+      <button id="findBtn" class="btn big" type="button" data-i="find"></button>
+      <p class="online"></p>
+    </div>
+    <p class="foot" data-i="footer"></p>
+  </section>
+
+  <!-- Searching -->
+  <section id="search" class="screen" hidden>
+    <div class="searching">
+      <div class="wobble"><span id="searchEmoji">😶</span></div>
+      <p class="search-title" data-i="searching"></p>
+      <p class="online"></p>
+      <div id="quiet" hidden>
+        <p class="muted" data-i="quiet"></p>
+        <button id="inviteBtn" class="btn ghost" type="button" data-i="invite"></button>
+      </div>
+    </div>
+    <button id="cancelBtn" class="link" type="button" data-i="cancel"></button>
+  </section>
+
+  <!-- Match -->
+  <section id="match" class="screen" hidden>
+    <header class="top">
+      <div class="chip">
+        <span id="ava" class="ava"></span>
+        <span id="them" class="them"></span>
+      </div>
+      <button id="nextBtn" class="next" type="button"><span data-i="next"></span> ⏭</button>
+    </header>
+    <div id="fuse" class="fuse" role="progressbar" aria-valuemin="0" aria-valuemax="90" data-i-aria="time_left">
+      <div id="fuseFill" class="fuse-fill"></div>
+      <span id="fuseSpark" class="fuse-spark">🔥</span>
+    </div>
+    <ol id="ladder" class="ladder"></ol>
+    <div id="feed" class="feed" aria-live="polite"></div>
+    <div class="dock">
+      <div class="meter"><div id="dots" class="dots"></div><span id="meterText" class="meter-text"></span></div>
+      <div id="consent" class="consent" hidden></div>
+      <div id="tray" class="tray">
+        <div id="tokens" class="tokens"></div>
+        <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" hidden>
+        <button id="sendBtn" class="send" type="button" disabled aria-label="Send">➤</button>
+      </div>
+      <nav id="tabs" class="tabs"></nav>
+      <div id="panel" class="panel"></div>
+    </div>
+    <div id="overlay" class="overlay" hidden></div>
+    <div id="connecting" class="connecting"><div class="wobble small"><span>👋</span></div><p data-i="connecting"></p></div>
+  </section>
+
+  <!-- Postcard -->
+  <section id="end" class="screen" hidden>
+    <div id="postcard" class="postcard"></div>
+    <div class="end-actions">
+      <button id="againBtn" class="btn big" type="button" data-i="next_stranger"></button>
+      <button id="shareBtn" class="btn ghost" type="button" data-i="share"></button>
+    </div>
+  </section>
+
+</main>
+<div id="confetti" class="confetti" aria-hidden="true"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
