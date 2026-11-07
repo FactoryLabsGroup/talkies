@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=6'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=6'
-import { Net } from './net.js?v=6'
+import { CONFIG } from './config.js?v=7'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=7'
+import { Net } from './net.js?v=7'
 
 // ---------------------------------------------------------------- content
 
@@ -349,6 +349,7 @@ function onGame(m) {
         if (H) { H.last = now(); H.lastActivity = now() }
         G.fuseEnd = now() + FUSE_START
         renderThem()
+        addIntro()
       }
       break
     }
@@ -543,7 +544,25 @@ function renderLadder() {
 
 function renderMeter() {
   renderLadder()
-  $('#meterText').textContent = G.view.stage < 5 && !G.view.ac ? t('hint') : ''
+  const v = G.view
+  $('#meterText').textContent = v.stage < 5 && !v.ac ? t('hint') : ''
+  // Spark toward the next unlock: one dot per volley needed.
+  $('#spark').replaceChildren(...(v.stage < 5 ? [
+    h('span', { class: 'spark-label' }, `${t('next_unlock')} `, h('b', {}, t('s' + (v.stage + 1)))),
+    h('span', { class: 'spark-dots' }, Array.from({ length: v.need || 0 }, (_, i) => h('i', { class: i < v.spark ? 'on' : '' }))),
+  ] : [h('span', { class: 'spark-label done' }, icon('check'), t('d5'))]))
+}
+
+// Welcome card at the top of a fresh match.
+function addIntro() {
+  const { tz, cc, lang: l } = G.them
+  let time = ''
+  try { time = new Intl.DateTimeFormat(lang === 'ka' ? 'ka-GE' : 'en-US', { hour: 'numeric', minute: '2-digit', hourCycle: lang === 'ka' ? 'h23' : 'h12', timeZone: tz || undefined }).format(new Date()) } catch {}
+  pushFeed(h('div', { class: 'intro' },
+    h('div', { class: 'intro-orbs' }, h('span', { class: 'ava you' }), h('span', { class: 'intro-link' }), h('span', { class: 'ava', style: `--hue:${G.hue}` })),
+    h('p', { class: 'intro-title' }, t('intro_title')),
+    h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'} ${LANG_NAME[l]}${time ? ' · ' + time : ''}`),
+    h('p', { class: 'intro-hint' }, t('intro_hint'))))
 }
 
 function renderConsent() {
@@ -803,7 +822,8 @@ function showJinx(id, opts) {
   const card = h('div', { class: 'jinx', 'data-jinx': id },
     h('p', { class: 'jinx-title' }, t('jinx_title')),
     h('div', { class: 'jinx-opts' }, opts.map(o => h('button', { class: 'jinx-opt', 'data-o': o, onclick: () => pickJinx(id, o) }, o))),
-    h('p', { class: 'jinx-status' }))
+    h('p', { class: 'jinx-status' }),
+    h('span', { class: 'jinx-timer' }))
   pushFeed(card)
   vibrate(15)
 }

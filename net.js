@@ -3,7 +3,7 @@
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=6'
+import { CONFIG } from './config.js?v=7'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000

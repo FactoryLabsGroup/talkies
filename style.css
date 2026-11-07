@@ -254,7 +254,7 @@ body[data-screen="landing"] .glow { opacity: 1; }
 .tab.locked { color: var(--muted); cursor: not-allowed; }
 .tab .ico { width: 14px; height: 14px; }
 
-.panel { height: 196px; overflow-y: auto; padding: 8px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border); overscroll-behavior: contain; }
+.panel { height: 158px; overflow-y: auto; padding: 8px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border); overscroll-behavior: contain; }
 .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 2px; }
 .key { position: relative; aspect-ratio: 1; display: grid; place-items: center; font-size: 24px; border-radius: 10px; transition: background .12s, transform .12s; }
 .key:hover { background: var(--surface-2); }
@@ -324,6 +324,60 @@ body[data-screen="landing"] .glow { opacity: 1; }
 @keyframes fadeInOut { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes fly { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; } }
 
+/* ---------- match: livelier details */
+.chat { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface) 240px); }
+.feed { background:
+  radial-gradient(70% 240px at 50% 0%, var(--accent-soft), transparent 72%),
+  radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1.3px) 0 0 / 22px 22px; }
+.composer { background: var(--surface); }
+.tray, .panel { background: var(--surface-2); }
+
+.intro { align-self: center; text-align: center; padding: 10px 24px 8px; animation: in .45s var(--ease); }
+.intro-orbs { display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.intro-orbs .ava { width: 54px; height: 54px; box-shadow: 0 0 0 4px var(--surface), 0 0 34px -4px hsl(var(--hue, 250) 85% 60% / .65); animation: orbL .7s var(--ease) both; }
+.intro-orbs .ava:last-child { animation-name: orbR; }
+.intro .you { --hue: 250; }
+.intro-link { width: 54px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--me-1), #FF7AD9); animation: linkPulse 1.8s ease-in-out .6s infinite both; }
+.intro-title { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.intro-sub { color: var(--text-2); margin-top: 4px; font-size: 14px; }
+.intro-hint { display: inline-flex; margin-top: 14px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-ring); }
+
+.spark { display: flex; align-items: center; gap: 12px; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: 13px; color: var(--text-2); white-space: nowrap; flex: none; }
+.spark b { color: var(--text); font-weight: 600; }
+.spark-dots { display: inline-flex; gap: 6px; }
+.spark-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-2); transition: background .3s, box-shadow .3s, transform .3s var(--ease); }
+.spark-dots i.on { background: var(--accent); box-shadow: 0 0 12px var(--accent); transform: scale(1.15); }
+.spark-label.done { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-weight: 500; }
+.spark-label.done .ico { width: 14px; height: 14px; }
+
+.jinx { position: relative; overflow: hidden; padding: 18px 26px; border: 1px solid transparent;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, linear-gradient(135deg, var(--me-1), #FF7AD9 50%, var(--me-2)) border-box;
+  box-shadow: 0 20px 50px -22px var(--accent-ring); }
+.jinx-title { color: var(--text); font-size: 13px; letter-spacing: .05em; }
+.jinx-opt { width: 78px; height: 78px; font-size: 38px; border-radius: 20px; }
+.jinx-opt:hover { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 12px 28px -12px var(--accent-ring); }
+.jinx-timer { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--me-1), #FF7AD9); transform-origin: left; animation: drain 15s linear forwards; }
+.jinx.picked .jinx-timer { opacity: .5; }
+.jinx.done .jinx-timer { display: none; }
+.jinx.hit { box-shadow: 0 0 0 4px var(--accent-soft), 0 24px 60px -20px var(--accent-ring); }
+
+.stranger .ava.lg { animation: breathe 3.2s ease-in-out infinite; box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px hsl(var(--hue, 250) 85% 60% / .45), 0 0 26px -2px hsl(var(--hue, 250) 85% 60% / .5); }
+.fuse-secs { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.side .fuse { height: 8px; }
+.side .fuse-fill { box-shadow: 0 0 16px var(--accent); }
+.step-row.now .dot { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 20px var(--accent-ring); }
+
+.tab.on { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-ring); }
+.key { transition: background .12s, transform .15s var(--ease); }
+.key:hover { background: var(--accent-soft); transform: translateY(-2px) scale(1.08); }
+.send:not(:disabled) { background: linear-gradient(135deg, var(--me-1), var(--me-2)); box-shadow: 0 8px 22px -8px var(--accent-ring); }
+
+@keyframes orbL { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@keyframes orbR { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+@keyframes linkPulse { 0%, 100% { opacity: .45; transform: scaleX(.8); } 50% { opacity: 1; transform: scaleX(1); } }
+@keyframes drain { to { transform: scaleX(0); } }
+@keyframes breathe { 50% { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px hsl(var(--hue, 250) 85% 60% / .3), 0 0 38px 0 hsl(var(--hue, 250) 85% 60% / .6); } }
+
 /* ---------- Georgian: no letter case (uppercase would turn into Mtavruli), calmer tracking */
 html[lang="ka"] * { text-transform: none !important; }
 html[lang="ka"] .headline { font-size: clamp(30px, 3.3vw, 48px); letter-spacing: -.01em; line-height: 1.18; }
@@ -353,6 +407,7 @@ html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
   .fuse.mobile-only { height: 4px; }
   .stage-title { font-size: 14px; }
   .hint { font-size: 12px; }
+  .spark { display: none; }
   .ladder-mini { display: grid; grid-template-columns: repeat(5, 22px); gap: 4px; flex: none; }
   .ladder-mini i { height: 4px; border-radius: 999px; background: var(--surface-3); position: relative; overflow: hidden; }
   .ladder-mini i::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(var(--f, 0)); transition: transform .5s var(--ease); }

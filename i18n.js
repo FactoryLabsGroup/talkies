@@ -21,6 +21,8 @@ export const STR = {
     invite_text: 'Talk to a stranger without words',       // share sheet text for an invite
     cancel: 'Cancel',
     connecting: 'Connecting…',                             // match, before the hello arrives
+    intro_title: 'You’re connected',                       // match, welcome card title
+    intro_hint: 'Say hi with an emoji',                    // match, welcome card hint
     next: 'Next',                                          // match, skip button
     stranger: 'Stranger',
     jinx_title: 'Same pick?',                              // jinx card title
@@ -73,6 +75,8 @@ export const STR = {
     invite_text: 'უცნობთან საუბარი სიტყვების გარეშე',
     cancel: 'გაუქმება',
     connecting: 'დაკავშირება…',
+    intro_title: 'დაკავშირდით',
+    intro_hint: 'მიესალმეთ ემოჯით',
     next: 'შემდეგი',
     stranger: 'უცნობი',
     jinx_title: 'დაემთხვევა?',
