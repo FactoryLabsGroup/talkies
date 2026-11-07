@@ -1,9 +1,11 @@
 // Peer-to-peer lobby + matchmaking on top of Trystero (WebRTC, Nostr relays for discovery only).
 // Everyone on the site sits in one lobby room. People who are searching pair up with a
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
+// Private invites skip the lobby: both people join a room named after a secret code from the
+// link, and whoever shows up there first becomes the partner.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=7'
+import { CONFIG } from './config.js?v=8'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
@@ -24,17 +26,19 @@ export class Net {
     this.reserved = null       // incoming proposal I accepted { by, n, t }
     this.partner = null
     this.timer = null
+    this.priv = null           // private invite room { room, g }
+    this.game = null           // the action game messages go through (lobby or private)
   }
 
   start() {
-    const cfg = { appId: APP_ID }
+    const cfg = this.cfg = { appId: APP_ID }
     if (CONFIG.TURN?.length) cfg.turnConfig = CONFIG.TURN
     // Local copies (localhost) use their own lobby so testing never pairs with real visitors.
     const local = /^(localhost|127\.|\[::1\])/.test(location.hostname)
     this.room = joinRoom(cfg, CONFIG.LOBBY + (local ? '-dev' : ''))
     this.st = this.room.makeAction('st')
     this.mm = this.room.makeAction('mm')
-    this.g = this.room.makeAction('g')
+    this.g = this.game = this.room.makeAction('g')
 
     this.room.onPeerJoin = id => {
       this.peers.set(id, 'idle')
@@ -55,11 +59,33 @@ export class Net {
       if (STATUSES.includes(s)) { this.peers.set(peerId, s); this.count() }
     }
     this.mm.onMessage = (m, { peerId }) => this.onHandshake(m, peerId)
-    this.g.onMessage = (m, { peerId }) => {
-      const mine = peerId === this.partner
-      this.h.onDebug?.('←', m, mine, peerId)
-      if (mine && m && typeof m === 'object') this.h.onGame(m)
+    this.g.onMessage = (m, { peerId }) => this.receive(m, peerId, this.g)
+  }
+
+  receive(m, peerId, via) {
+    const mine = peerId === this.partner && via === this.game
+    this.h.onDebug?.('←', m, mine, peerId)
+    if (mine && m && typeof m === 'object') this.h.onGame(m)
+  }
+
+  // Join (or create) the private room for an invite code and wait for the other person.
+  openPrivate(code) {
+    this.stopSearch()
+    this.setStatus('busy')
+    const room = joinRoom(this.cfg, 'invite-' + code)
+    const g = room.makeAction('g')
+    g.onMessage = (m, { peerId }) => this.receive(m, peerId, g)
+    room.onPeerJoin = id => { if (!this.partner && this.priv?.room === room) this.begin(id, g) }
+    room.onPeerLeave = id => {
+      if (id === this.partner && this.game === g) { this.partner = null; this.h.onPartnerGone() }
     }
+    this.priv = { room, g }
+  }
+
+  closePrivate() {
+    if (!this.priv) return
+    try { this.priv.room.leave() } catch {}
+    this.priv = null
   }
 
   count() { this.h.onCount(this.peers.size + 1) }
@@ -79,6 +105,7 @@ export class Net {
   stopSearch() {
     clearInterval(this.timer)
     this.pending = this.reserved = null
+    this.closePrivate()
     this.setStatus('idle')
   }
 
@@ -126,10 +153,11 @@ export class Net {
     }
   }
 
-  begin(partner) {
+  begin(partner, via = this.g) {
     clearInterval(this.timer)
     this.pending = this.reserved = null
     this.partner = partner
+    this.game = via
     this.recent.add(partner)
     this.setStatus('busy')
     this.h.onMatch(partner, this.id < partner)
@@ -137,11 +165,13 @@ export class Net {
 
   send(msg) {
     this.h.onDebug?.('→', msg, !!this.partner, this.partner)
-    if (this.partner) this.g.send(msg, { target: this.partner })
+    if (this.partner) this.game.send(msg, { target: this.partner })
   }
 
   endMatch() {
     this.partner = null
+    this.game = this.g
+    this.closePrivate()
     this.setStatus('idle')
   }
 }

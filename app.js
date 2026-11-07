@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=7'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=7'
-import { Net } from './net.js?v=7'
+import { CONFIG } from './config.js?v=8'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=8'
+import { Net } from './net.js?v=8'
 
 // ---------------------------------------------------------------- content
 
@@ -50,6 +50,8 @@ const ICONS = {
   skip: SVG('<path d="m6 5 9 7-9 7z"/><path d="M18 5v14"/>'),
   lock: SVG('<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'),
   check: SVG('<path d="M20 6 9 17l-5-5"/>', 2.5),
+  link: SVG('<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'),
+  share: SVG('<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'),
   s1: SVG('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/><path d="M9 9.5h.01M15 9.5h.01"/>'),
   s2: SVG('<path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/>'),
   s3: SVG('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4M3 12h18"/>'),
@@ -243,7 +245,52 @@ function stopSearchUi() { searchTimers.forEach(t => { clearInterval(t); clearTim
 $('#findBtn').addEventListener('click', startSearch)
 $('#againBtn').addEventListener('click', startSearch)
 $('#cancelBtn').addEventListener('click', () => { stopSearchUi(); net.stopSearch(); show('landing') })
-$('#inviteBtn').addEventListener('click', () => share(t('invite_text'), $('#inviteBtn')))
+$('#inviteBtn').addEventListener('click', () => { stopSearchUi(); startInvite() })
+
+// ---------------------------------------------------------------- private invites
+// "Invite a friend" makes a secret code, shows a link with it, and waits in a private room.
+// Whoever opens the link joins the same room and the two of you are matched directly.
+
+const CODE_ABC = 'abcdefghijkmnpqrstuvwxyz23456789'
+const newCode = () => [...crypto.getRandomValues(new Uint8Array(10))].map(b => CODE_ABC[b % CODE_ABC.length]).join('')
+const inviteUrl = code => `${location.origin}${location.pathname}?invite=${code}`
+let joinTimer = null
+
+function startInvite() {
+  const code = newCode()
+  const link = inviteUrl(code)
+  $('#inviteLink').value = link
+  $('#shareLinkBtn').hidden = !navigator.share
+  show('invite')
+  net.openPrivate(code)
+}
+$('#inviteFriendBtn').addEventListener('click', startInvite)
+$('#inviteCancel').addEventListener('click', () => { net.stopSearch(); show('landing') })
+$('#inviteLink').addEventListener('focus', e => e.target.select())
+$('#copyBtn').addEventListener('click', async () => {
+  const btn = $('#copyBtn'), input = $('#inviteLink')
+  try { await navigator.clipboard.writeText(input.value) } catch { input.select(); document.execCommand?.('copy') }
+  btn.textContent = t('copied')
+  setTimeout(() => (btn.textContent = t('copy')), 1600)
+})
+$('#shareLinkBtn').addEventListener('click', async () => {
+  try { await navigator.share({ title: CONFIG.BRAND, text: t('invite_share_text'), url: $('#inviteLink').value }) } catch {}
+})
+
+// Opened someone's invite link: go straight to their private room.
+function joinInvite(code) {
+  history.replaceState(null, '', location.pathname)
+  $('#joinGone').hidden = $('#joinFind').hidden = true
+  show('join')
+  net.openPrivate(code)
+  clearTimeout(joinTimer)
+  joinTimer = setTimeout(() => {
+    if (document.body.dataset.screen !== 'join') return
+    $('#joinGone').hidden = $('#joinFind').hidden = false
+  }, 20000)
+}
+$('#joinFind').addEventListener('click', () => { net.stopSearch(); startSearch() })
+$('#joinCancel').addEventListener('click', () => { clearTimeout(joinTimer); net.stopSearch(); show('landing') })
 
 async function share(text, btn) {
   const data = { title: CONFIG.BRAND, text, url: CONFIG.URL }
@@ -265,6 +312,7 @@ let H = null   // host-only authoritative state
 
 function startMatch(partner, isHost) {
   stopSearchUi()
+  clearTimeout(joinTimer)
   G = {
     partner, host: isHost, them: null, theyGotMine: false, ended: false,
     ava: pick(AVATARS), hue: Math.floor(Math.random() * 360),
@@ -935,4 +983,6 @@ const stat = (n, label) => h('div', { class: 'stat' }, h('b', {}, String(n)), h(
 
 hydrateIcons()
 applyLang()
-show('landing')
+const inviteCode = new URLSearchParams(location.search).get('invite')
+if (/^[a-z0-9]{6,20}$/.test(inviteCode || '')) joinInvite(inviteCode)
+else show('landing')

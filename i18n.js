@@ -17,8 +17,16 @@ export const STR = {
     alone: 'Just you here right now',                      // landing + search, nobody else online
     searching: 'Looking for a stranger…',                  // search screen title
     quiet: 'It’s quiet right now',                         // search, after 20 s
-    invite: 'Invite someone',                              // search, share button
+    invite: 'Invite a friend',                             // search, makes a private link
     invite_text: 'Talk to a stranger without words',       // share sheet text for an invite
+    invite_btn: 'Invite a friend',                         // landing, secondary button next to Find
+    invite_title: 'Invite a friend',                       // invite screen title
+    invite_sub: 'Send this private link. You’ll be connected as soon as they open it.', // invite screen
+    copy: 'Copy',                                          // invite screen, copy button
+    invite_wait: 'Waiting for your friend…',               // invite screen status
+    invite_share_text: 'Join me on Talkies. We start with emoji only.', // share sheet text for a private link
+    joining: 'Joining your friend…',                       // opened an invite link
+    friend_gone: 'Your friend isn’t here right now',       // invite link opened but nobody is waiting
     cancel: 'Cancel',
     connecting: 'Connecting…',                             // match, before the hello arrives
     intro_title: 'You’re connected',                       // match, welcome card title
@@ -71,8 +79,16 @@ export const STR = {
     alone: 'ახლა აქ მარტო ხართ',
     searching: 'უცნობს ვეძებთ…',
     quiet: 'ახლა წყნარა',
-    invite: 'ვინმეს მოწვევა',
+    invite: 'მეგობრის მოწვევა',
     invite_text: 'უცნობთან საუბარი სიტყვების გარეშე',
+    invite_btn: 'მეგობრის მოწვევა',
+    invite_title: 'მეგობრის მოწვევა',
+    invite_sub: 'გაუგზავნეთ ეს პირადი ბმული. გახსნისთანავე დაგაკავშირებთ.',
+    copy: 'კოპირება',
+    invite_wait: 'მეგობარს ველოდებით…',
+    invite_share_text: 'შემოდი Talkies-ზე, მხოლოდ ემოჯით ვიწყებთ.',
+    joining: 'მეგობართან დაკავშირება…',
+    friend_gone: 'მეგობარი ახლა აქ არ არის',
     cancel: 'გაუქმება',
     connecting: 'დაკავშირება…',
     intro_title: 'დაკავშირდით',

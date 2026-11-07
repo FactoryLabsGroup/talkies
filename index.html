@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=7">
-  <script type="module" src="app.js?v=7"></script>
+  <link rel="stylesheet" href="style.css?v=8">
+  <script type="module" src="app.js?v=8"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -45,8 +45,9 @@
         <p class="lead" data-i="lead"></p>
         <div class="cta-row">
           <button id="findBtn" class="btn primary lg" type="button"><span data-i="find"></span><span class="ico" data-icon="arrow"></span></button>
-          <p class="online"></p>
+          <button id="inviteFriendBtn" class="btn secondary lg" type="button"><span class="ico" data-icon="link"></span><span data-i="invite_btn"></span></button>
         </div>
+        <p class="online"></p>
       </div>
       <div class="demo" aria-hidden="true">
         <div class="demo-head">
@@ -69,6 +70,33 @@
         <button id="inviteBtn" class="btn secondary" type="button" data-i="invite"></button>
       </div>
       <button id="cancelBtn" class="btn ghost" type="button" data-i="cancel"></button>
+    </div>
+  </section>
+
+  <!-- Invite: private link -->
+  <section id="invite" class="screen" hidden>
+    <div class="center-card invite-card">
+      <div class="radar"><span class="ico big-ico" data-icon="link"></span></div>
+      <h2 class="h2" data-i="invite_title"></h2>
+      <p class="muted invite-sub" data-i="invite_sub"></p>
+      <div class="link-box">
+        <input id="inviteLink" class="link-input" type="text" readonly aria-label="Link">
+        <button id="copyBtn" class="btn primary sm" type="button" data-i="copy"></button>
+      </div>
+      <button id="shareLinkBtn" class="btn secondary" type="button"><span class="ico" data-icon="share"></span><span data-i="share"></span></button>
+      <p class="invite-wait"><span class="live-dot"></span><span data-i="invite_wait"></span></p>
+      <button id="inviteCancel" class="btn ghost" type="button" data-i="cancel"></button>
+    </div>
+  </section>
+
+  <!-- Join: opened someone's invite link -->
+  <section id="join" class="screen" hidden>
+    <div class="center-card">
+      <div class="radar"><span>🤝</span></div>
+      <h2 class="h2" data-i="joining"></h2>
+      <p id="joinGone" class="muted" data-i="friend_gone" hidden></p>
+      <button id="joinFind" class="btn primary" type="button" data-i="find" hidden></button>
+      <button id="joinCancel" class="btn ghost" type="button" data-i="cancel"></button>
     </div>
   </section>
 
