@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Talkies</title>
-  <meta name="description" content="Meet a stranger. Earn your words. Start with emoji, unlock phrases, GIFs and free chat by taking turns.">
+  <meta name="description" content="Meet a stranger. Earn your words. Start with GIFs only, then switch to text when you both want to.">
   <meta name="theme-color" content="#09090B">
   <meta name="color-scheme" content="dark">
   <meta property="og:title" content="Talkies">
@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=10">
-  <script type="module" src="app.js?v=10"></script>
+  <link rel="stylesheet" href="style.css?v=11">
+  <script type="module" src="app.js?v=11"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -52,7 +52,7 @@
       <div class="demo" aria-hidden="true">
         <div class="demo-head">
           <div class="demo-avas"><span class="ava" style="--hue: 195"></span><span class="ava" style="--hue: 300"></span></div>
-          <div id="demoBar" class="demo-bar"><i></i><i></i><i></i><i></i><i></i></div>
+          <div id="demoBar" class="demo-bar"><i></i><i></i></div>
         </div>
         <div id="demoFeed" class="demo-feed"></div>
       </div>
@@ -62,7 +62,7 @@
   <!-- Searching -->
   <section id="search" class="screen" hidden>
     <div class="center-card">
-      <div class="radar"><span id="searchEmoji">😶</span></div>
+      <div class="radar"><span class="ico big-ico" data-icon="search"></span></div>
       <h2 class="h2" data-i="searching"></h2>
       <p class="online"></p>
       <div id="quiet" hidden>
@@ -112,7 +112,7 @@
           </div>
         </div>
         <div class="side-block">
-          <div class="row-between"><p class="label" data-i="time_left"></p><p id="fuseSecs" class="fuse-secs"></p></div>
+          <div class="row-between"><p id="textLabel" class="label"></p><p id="fuseSecs" class="fuse-secs"></p></div>
           <div class="fuse"><div class="fuse-fill"></div></div>
         </div>
         <ol id="ladder" class="ladder"></ol>
@@ -131,21 +131,24 @@
               <p id="stageTitle" class="stage-title"></p>
               <p id="meterText" class="hint"></p>
             </div>
-            <div id="spark" class="spark"></div>
-            <div id="ladderMini" class="ladder-mini"></div>
           </div>
         </div>
         <div id="feed" class="feed" aria-live="polite"></div>
         <div class="composer">
           <div id="consent" class="consent" hidden></div>
-          <div id="tray" class="tray">
-            <div id="tokens" class="tokens" hidden></div>
-            <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send">
-            <span id="wordCount" class="word-count"></span>
+          <div id="gifPanel" class="gif-panel">
+            <div class="gif-top">
+              <label class="gif-search-box"><span class="ico" data-icon="search"></span><input id="gifSearch" class="gif-search" type="search" autocomplete="off" enterkeyhint="search" data-ph="gif_search"></label>
+            </div>
+            <div id="gifChips" class="gif-chips"></div>
+            <div id="gifGrid" class="gif-grid"></div>
+            <p class="giphy">Powered by GIPHY</p>
+          </div>
+          <div id="tray" class="tray" hidden>
+            <button id="gifBtn" class="gif-btn" type="button" aria-label="GIF" aria-expanded="false">GIF</button>
+            <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" maxlength="300" data-ph="free_ph">
             <button id="sendBtn" class="send" type="button" disabled aria-label="Send"><span class="ico" data-icon="send"></span></button>
           </div>
-          <nav id="tabs" class="tabs" hidden></nav>
-          <div id="panel" class="panel" hidden></div>
         </div>
       </div>
     </div>
