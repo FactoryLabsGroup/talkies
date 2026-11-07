@@ -16,7 +16,6 @@ export const STR = {
     online_one: '1 person here now',                       // landing + search, {n} = 1
     online_other: '{n} people here now',                   // landing + search, {n} = count
     alone: 'Just you here right now',                      // landing + search, nobody else online
-    footer: '18+ · be kind · nothing is saved',            // landing footer
     searching: 'Looking for a stranger…',                  // search screen title
     quiet: 'It’s quiet right now',                         // search, after 20 s
     invite: 'Invite someone',                              // search, share button
@@ -30,11 +29,11 @@ export const STR = {
     jinx_miss: 'Different taste',                          // picks differ
     jinx_wait: 'Waiting for them…',                        // I picked, they haven't
     hint: 'Take turns to unlock the next one',             // spark meter caption
-    s1: 'Silent', s2: 'Title cards', s3: 'Reels', s4: 'Whisper', s5: 'Talkie',            // stage names
+    s1: 'Silent', s2: 'Title cards', s3: 'Reels', s4: 'Whisper', s5: 'Free chat',            // stage names
     d1: 'Emoji only', d2: 'Words and phrases', d3: 'GIFs', d4: '3 words of text', d5: 'Say anything', // stage descriptions
     unlocked: 'Unlocked',                                  // level-up overlay
     next_unlock: 'Next:',                                  // progress bar, before the next stage name
-    consent_ask: 'Go full talkie? You both have to agree', // stage 4 → 5 gate
+    consent_ask: 'Open free chat? You both have to agree', // stage 4 → 5 gate
     consent_btn: 'I’m in',
     consent_wait: 'You’re in. Waiting for them…',
     consent_them: 'They’re in',
@@ -70,7 +69,6 @@ export const STR = {
     online_one: 'ახლა აქ 1 ადამიანია',
     online_other: 'ახლა აქ {n} ადამიანია',
     alone: 'ახლა აქ მარტო ხართ',
-    footer: '18+ · კეთილი იყავით · არაფერი ინახება',
     searching: 'უცნობს ვეძებთ…',
     quiet: 'ახლა წყნარა',
     invite: 'ვინმეს მოწვევა',
@@ -84,11 +82,11 @@ export const STR = {
     jinx_miss: 'სხვადასხვა გემოვნება',
     jinx_wait: 'უცნობს ველოდებით…',
     hint: 'მონაცვლეობით გაგზავნეთ და შემდეგი გაიხსნება',
-    s1: 'მუნჯი', s2: 'ტიტრები', s3: 'კადრები', s4: 'ჩურჩული', s5: 'ხმოვანი',
+    s1: 'მუნჯი', s2: 'ტიტრები', s3: 'კადრები', s4: 'ჩურჩული', s5: 'თავისუფალი ჩატი',
     d1: 'მხოლოდ ემოჯი', d2: 'სიტყვები და ფრაზები', d3: 'GIF‑ები', d4: 'ტექსტი, მაქსიმუმ 3 სიტყვა', d5: 'თქვით, რაც გინდათ',
     unlocked: 'გაიხსნა',
     next_unlock: 'შემდეგი:',
-    consent_ask: 'ხმოვან რეჟიმზე გადავიდეთ? საჭიროა ორივეს თანხმობა',
+    consent_ask: 'გავხსნათ თავისუფალი ჩატი? საჭიროა ორივეს თანხმობა',
     consent_btn: 'თანახმა ვარ',
     consent_wait: 'თანახმა ხართ. უცნობს ველოდებით…',
     consent_them: 'უცნობი თანახმაა',

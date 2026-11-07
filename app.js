@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=4'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=4'
-import { Net } from './net.js?v=4'
+import { CONFIG } from './config.js?v=5'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=5'
+import { Net } from './net.js?v=5'
 
 // ---------------------------------------------------------------- content
 
@@ -22,7 +22,7 @@ const GIF_OK = /^https:\/\/(media\d?\.giphy\.com|i\.giphy\.com|fonts\.gstatic\.c
 
 const FAST = new URLSearchParams(location.search).has('fast')
 const NEED = FAST ? { 1: 2, 2: 2, 3: 2, 4: 2 } : { 1: 4, 2: 5, 3: 5, 4: 6 }
-const STAGE_ICON = [null, '😶', '🔤', '🎞️', '🤫', '🗣️']
+const STAGE_ICON = [null, '😶', '🔤', '🎞️', '🤫', '💬']
 const FUSE_START = 45000
 const fuseCap = stage => (stage >= 4 ? 90000 : 60000)
 
@@ -54,7 +54,7 @@ const ICONS = {
   s2: SVG('<path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/>'),
   s3: SVG('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4M3 12h18"/>'),
   s4: SVG('<path d="M21 12a8 8 0 0 1-11.7 7.1L3 21l1.9-6.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>'),
-  s5: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M18.5 10.5v.5a6.5 6.5 0 0 1-13 0v-.5"/><path d="M12 17.5V21"/>'),
+  s5: SVG('<path d="M20 15.5a2 2 0 0 1-2 2H8l-4 3.5V5.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>'),
 }
 function icon(name, cls = 'ico') {
   const s = document.createElement('span')
@@ -502,7 +502,7 @@ function renderConsent() {
     !mine && h('button', { class: 'btn small', onclick: () => {
       if (H) hostConsent(0)
       else { net.send({ t: 'ok' }); G.view.cons = [...G.view.cons]; G.view.cons[1] = true; renderConsent() }
-    } }, '🗣️ ' + t('consent_btn'))].filter(Boolean))
+    } }, t('consent_btn'))].filter(Boolean))
 }
 
 // ---------------------------------------------------------------- fuse

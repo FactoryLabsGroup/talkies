@@ -25,7 +25,7 @@ It isn't chat with restrictions. It's a **two-player co-op game where the prize 
 | 2 | 🔤 **Title cards** | + 26 phrases, auto-translated | 4 volleys |
 | 3 | 🎞️ **Reels** | + GIFs | 5 volleys |
 | 4 | 🤫 **Whisper** | + 3 words of text (letters only) | 5 volleys |
-| 5 | 🗣️ **Talkie** | free text | 6 volleys **and both tap "I'm in"** |
+| 5 | 💬 **Free chat** | free text | 6 volleys **and both tap "I'm in"** |
 
 Earlier tools stay unlocked, so one late message can mix everything: `🙋 + "I'm hungry" + 🍕 + GIF + "pizza tonight"`.
 
@@ -104,7 +104,7 @@ Landing ──tap──▶ Searching ──match──▶ Match ──fuse out /
 
 ## 9. Brand
 
-- **Name:** **Talkies**. Short, warm, and the story is built in (silent film → sound).
+- **Name:** **Talkies**. Short, warm, and the story is built in (silent film → sound film).
 - **Tagline:** "Meet a stranger. Earn your words." Secondary line: "Every chat starts as a silent film."
 - **Logo:** a coral speech bubble with film sprocket holes and three blinking dots.
 - **Palette:** warm paper `#FFF4E2`, ink `#16130F`, coral `#FF5A36`. Stage colors: lemon `#FFD23F` · mint `#3DDC97` · sky `#4CC9F0` · violet `#9B5DE5` · coral. Dark mode flips paper and ink.
