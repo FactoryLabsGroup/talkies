@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=5'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=5'
-import { Net } from './net.js?v=5'
+import { CONFIG } from './config.js?v=6'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=6'
+import { Net } from './net.js?v=6'
 
 // ---------------------------------------------------------------- content
 
@@ -109,11 +109,8 @@ function applyLang() {
   document.documentElement.lang = lang
   document.querySelectorAll('[data-i]').forEach(el => (el.textContent = t(el.dataset.i)))
   $('#langBtn').textContent = lang === 'ka' ? 'English' : 'ქართული'
-  $('#steps').replaceChildren(...[1, 2, 3, 4, 5].map(i => h('li', { class: 'step' },
-    h('div', { class: 'step-top' }, h('span', { class: 'step-ico' }, icon('s' + i)), h('span', { class: 'step-num' }, String(i).padStart(2, '0'))),
-    h('p', { class: 'step-name' }, t('s' + i)),
-    h('p', { class: 'step-desc' }, t('d' + i)))))
   renderCount()
+  startDemo()
   if (G && !G.ended) { renderAll(); renderThem() }
 }
 $('#langBtn').addEventListener('click', () => {
@@ -127,6 +124,65 @@ $('#langBtn').addEventListener('click', () => {
 function show(name) {
   document.body.dataset.screen = name
   document.querySelectorAll('.screen').forEach(s => (s.hidden = s.id !== name))
+  if (name === 'landing') startDemo()
+}
+
+// ---------------------------------------------------------------- landing demo
+// A looping make-believe match that shows the idea without explaining it.
+const DEMO = [
+  { who: 'them', tk: [['e', '👋']] },
+  { who: 'me', tk: [['e', '😄'], ['e', '🍕']] },
+  { who: 'them', tk: [['e', '🍕'], ['e', '❤️']] },
+  { stage: 2 },
+  { who: 'me', tk: [['p', 'hi']] },
+  { who: 'them', tk: [['p', 'where']] },
+  { who: 'me', tk: [['e', '🌍'], ['p', 'guess']] },
+  { stage: 3 },
+  { who: 'them', tk: [['g', notoUrl('1f389')]] },
+  { stage: 5 },
+  { typing: true },
+  { who: 'them', tk: [['w', 'demo_text']] },
+]
+let demoRun = 0
+function startDemo() {
+  const run = ++demoRun
+  const feed = $('#demoFeed'), bars = [...document.querySelectorAll('#demoBar i')]
+  const wait = ms => new Promise(r => setTimeout(r, ms))
+  const alive = () => run === demoRun && document.body.dataset.screen === 'landing'
+  ;(async () => {
+    await wait(50)
+    while (alive()) {
+      feed.classList.remove('fade')
+      feed.replaceChildren()
+      bars.forEach((b, i) => b.classList.toggle('on', i === 0))
+      for (const step of DEMO) {
+        await wait(step.stage ? 850 : step.typing ? 700 : 1150)
+        if (!alive()) return
+        feed.querySelector('.demo-typing')?.closest('.row')?.remove()
+        if (step.stage) {
+          bars.forEach((b, i) => b.classList.toggle('on', i < step.stage))
+          feed.append(h('div', { class: 'demo-unlock' }, icon('s' + step.stage), `${t('unlocked')} · ${t('s' + step.stage)}`))
+        } else if (step.typing) {
+          feed.append(h('div', { class: 'row them' }, h('span', { class: 'ava', style: '--hue: 300' }),
+            h('div', { class: 'bubble demo-typing' }, h('i'), h('i'), h('i'))))
+        } else feed.append(demoRow(step))
+        while (feed.children.length > 9) feed.firstElementChild.remove()
+      }
+      await wait(2800)
+      if (!alive()) return
+      feed.classList.add('fade')
+      await wait(600)
+    }
+  })()
+}
+function demoRow({ who, tk }) {
+  const onlyEmoji = tk.every(([k]) => k === 'e'), gif = tk[0][0] === 'g'
+  const bubble = h('div', { class: `bubble${onlyEmoji ? ' big' : ''}${gif ? ' has-gif' : ''}` }, tk.map(([k, v]) =>
+    k === 'e' ? h('span', { class: 'e' }, v)
+      : k === 'p' ? h('span', { class: 'card' }, PHRASE_MAP[v][lang])
+        : k === 'g' ? h('img', { class: 'gif-msg', src: v, width: 88, height: 88, alt: '', referrerpolicy: 'no-referrer' })
+          : h('span', {}, t(v))))
+  return h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: '--hue: 300' }), bubble)
 }
 
 let online = 1

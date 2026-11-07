@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=5">
-  <script type="module" src="app.js?v=5"></script>
+  <link rel="stylesheet" href="style.css?v=6">
+  <script type="module" src="app.js?v=6"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -31,7 +31,6 @@
     <span>Talkies</span>
   </a>
   <div class="nav-right">
-    <span class="online"></span>
     <button id="langBtn" class="lang" type="button"></button>
   </div>
 </header>
@@ -41,16 +40,21 @@
   <!-- Landing -->
   <section id="landing" class="screen">
     <div class="hero">
-      <p class="pill"><span class="pill-dot"></span><span data-i="pill"></span></p>
-      <h1 class="headline" data-i="tagline"></h1>
-      <p class="lead" data-i="lead"></p>
-      <div class="cta-row">
-        <button id="findBtn" class="btn primary lg" type="button"><span data-i="find"></span><span class="ico" data-icon="arrow"></span></button>
+      <div class="hero-copy">
+        <h1 class="headline" data-i="tagline"></h1>
+        <p class="lead" data-i="lead"></p>
+        <div class="cta-row">
+          <button id="findBtn" class="btn primary lg" type="button"><span data-i="find"></span><span class="ico" data-icon="arrow"></span></button>
+          <p class="online"></p>
+        </div>
       </div>
-    </div>
-    <div class="how">
-      <p class="how-title" data-i="how_title"></p>
-      <ol id="steps" class="steps"></ol>
+      <div class="demo" aria-hidden="true">
+        <div class="demo-head">
+          <div class="demo-avas"><span class="ava" style="--hue: 195"></span><span class="ava" style="--hue: 300"></span></div>
+          <div id="demoBar" class="demo-bar"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div id="demoFeed" class="demo-feed"></div>
+      </div>
     </div>
   </section>
 

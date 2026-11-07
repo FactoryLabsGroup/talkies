@@ -8,9 +8,8 @@ export const STR = {
   en: {
     tagline: 'Meet a stranger. Earn your words.',          // landing, under the logo
     sub: 'Every chat starts as a silent film.',            // landing, small line
-    pill: 'A social experiment by Factory Labs',           // landing, badge above the headline
-    lead: 'Start with emoji only. Take turns to unlock phrases, GIFs, a few words and finally free chat. No sign-up.', // landing, under the headline
-    how_title: 'How it works',                             // landing, above the 5 stage cards
+    lead: 'Start with emoji. Take turns to unlock words.',  // landing, under the headline
+    demo_text: 'Okay, this is fun',                        // landing demo, the free-chat message
     stage_of: 'Stage {n} of 5',                            // match header, {n} = current stage
     find: 'Find a stranger',                               // landing, main button
     online_one: '1 person here now',                       // landing + search, {n} = 1
@@ -61,9 +60,8 @@ export const STR = {
   ka: {
     tagline: 'გაიცანით უცნობი. დაიმსახურეთ სიტყვები.',
     sub: 'ყველა საუბარი მუნჯი კინოთი იწყება.',
-    pill: 'სოციალური ექსპერიმენტი Factory Labs-ისგან',
-    lead: 'დაიწყეთ მხოლოდ ემოჯით. მონაცვლეობით გახსენით ფრაზები, GIF‑ები, რამდენიმე სიტყვა და ბოლოს თავისუფალი მიმოწერა. რეგისტრაციის გარეშე.',
-    how_title: 'როგორ მუშაობს',
+    lead: 'დაიწყეთ ემოჯით. მონაცვლეობით გახსენით სიტყვები.',
+    demo_text: 'კარგი, ეს მართლა მაგარია',
     stage_of: 'ეტაპი {n} / 5',
     find: 'უცნობის პოვნა',
     online_one: 'ახლა აქ 1 ადამიანია',
