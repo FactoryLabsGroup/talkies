@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=8'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=8'
-import { Net } from './net.js?v=8'
+import { CONFIG } from './config.js?v=9'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=9'
+import { Net } from './net.js?v=9'
 
 // ---------------------------------------------------------------- content
 
@@ -10,9 +10,13 @@ const EMOJI = ['😀','😂','🥺','😍','😮','😎','🤔','😴','🥳','�
 const EMOJI_SET = new Set(EMOJI)
 const REACTIONS = ['❤️', '😂', '😮', '👀']
 const AVATARS = ['🦊','🐼','🐸','🐙','🦉','🐨','🐯','🦄','🐵','🐧','🦁','🐰','🐻','🐲','🦖','🐳','🦔','🦦']
-const JINX = [['🐶','🐱'],['☀️','🌙'],['🍕','🍣'],['🏔️','🏖️'],['☕','🍵'],['🎸','🎧'],['🚀','🐢'],
-  ['🍦','🍫'],['📚','🎮'],['🌧️','❄️'],['🦖','🦄'],['🥐','🌮'],['🧛','🧟'],['🏙️','🌲'],['🍎','🍌','🍇'],
-  ['😴','🕺'],['✈️','🚂'],['🎂','🍩'],['👽','🤖'],['🐙','🦈'],['🌶️','🍯'],['🎬','📖'],['🌅','🌃'],['🐝','🦋']]
+const JINXW = [[['Sea', 'ზღვა'], ['Mountains', 'მთა']], [['Day', 'დღე'], ['Night', 'ღამე']], [['Cats', 'კატა'], ['Dogs', 'ძაღლი']],
+  [['Coffee', 'ყავა'], ['Tea', 'ჩაი']], [['Books', 'წიგნი'], ['Movies', 'ფილმი']], [['Summer', 'ზაფხული'], ['Winter', 'ზამთარი']],
+  [['City', 'ქალაქი'], ['Village', 'სოფელი']], [['Sweet', 'ტკბილი'], ['Salty', 'მლაშე']], [['Morning', 'დილა'], ['Evening', 'საღამო']],
+  [['Rain', 'წვიმა'], ['Sun', 'მზე']], [['Music', 'მუსიკა'], ['Silence', 'სიჩუმე']], [['Pizza', 'პიცა'], ['Khachapuri', 'ხაჭაპური']],
+  [['Travel', 'მოგზაურობა'], ['Home', 'სახლი']], [['Past', 'წარსული'], ['Future', 'მომავალი']]]
+const JINX = JINXW.map((p, i) => p.map((_, j) => `${i}-${j}`))
+const jw = id => { const [i, j] = String(id).split('-').map(Number); return JINXW[i]?.[j]?.[lang === 'ka' ? 1 : 0] ?? '' }
 // Animated Noto emoji (Google) — the GIF fallback when there's no GIPHY key.
 const NOTO = { '😂':'1f602','🤣':'1f923','😍':'1f60d','🥰':'1f970','😭':'1f62d','😱':'1f631','🤯':'1f92f',
   '🥳':'1f973','😎':'1f60e','🤔':'1f914','🙄':'1f644','😴':'1f634','💀':'1f480','👻':'1f47b','🔥':'1f525',
@@ -22,7 +26,10 @@ const GIF_OK = /^https:\/\/(media\d?\.giphy\.com|i\.giphy\.com|fonts\.gstatic\.c
 
 const FAST = new URLSearchParams(location.search).has('fast')
 const NEED = FAST ? { 1: 2, 2: 2, 3: 2, 4: 2 } : { 1: 4, 2: 5, 3: 5, 4: 6 }
-const STAGE_ICON = [null, '😶', '🔤', '🎞️', '🤫', '💬']
+const STAGE_ICON = [null, '1', '2', '3', '5', '💬']
+// Word budget per stage: you earn more words by taking turns.
+const WORDS = [0, 1, 2, 3, 5, Infinity]
+const wordCount = s => s.trim().split(/\s+/).filter(Boolean).length
 const FUSE_START = 45000
 const fuseCap = stage => (stage >= 4 ? 90000 : 60000)
 
@@ -52,10 +59,10 @@ const ICONS = {
   check: SVG('<path d="M20 6 9 17l-5-5"/>', 2.5),
   link: SVG('<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'),
   share: SVG('<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'),
-  s1: SVG('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/><path d="M9 9.5h.01M15 9.5h.01"/>'),
-  s2: SVG('<path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/>'),
-  s3: SVG('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4M3 12h18"/>'),
-  s4: SVG('<path d="M21 12a8 8 0 0 1-11.7 7.1L3 21l1.9-6.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>'),
+  s1: SVG('<text x="12" y="16.6" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">1</text><circle cx="12" cy="12" r="9.5"/>', 1.6),
+  s2: SVG('<text x="12" y="16.6" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">2</text><circle cx="12" cy="12" r="9.5"/>', 1.6),
+  s3: SVG('<text x="12" y="16.6" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">3</text><circle cx="12" cy="12" r="9.5"/>', 1.6),
+  s4: SVG('<text x="12" y="16.6" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">5</text><circle cx="12" cy="12" r="9.5"/>', 1.6),
   s5: SVG('<path d="M20 15.5a2 2 0 0 1-2 2H8l-4 3.5V5.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>'),
 }
 function icon(name, cls = 'ico') {
@@ -131,16 +138,17 @@ function show(name) {
 
 // ---------------------------------------------------------------- landing demo
 // A looping make-believe match that shows the idea without explaining it.
+const W = (en, ka) => ['t', { en, ka }]
 const DEMO = [
-  { who: 'them', tk: [['e', '👋']] },
-  { who: 'me', tk: [['e', '😄'], ['e', '🍕']] },
-  { who: 'them', tk: [['e', '🍕'], ['e', '❤️']] },
+  { who: 'them', tk: [W('Sea?', 'ზღვა?')] },
+  { who: 'me', tk: [W('Mountains.', 'მთა.')] },
   { stage: 2 },
-  { who: 'me', tk: [['p', 'hi']] },
-  { who: 'them', tk: [['p', 'where']] },
-  { who: 'me', tk: [['e', '🌍'], ['p', 'guess']] },
+  { who: 'them', tk: [W('Why mountains?', 'რატომ მთა?')] },
+  { who: 'me', tk: [W('Love silence.', 'სიჩუმე მიყვარს.')] },
   { stage: 3 },
-  { who: 'them', tk: [['g', notoUrl('1f389')]] },
+  { who: 'them', tk: [W('Me too, honestly.', 'მეც, გულწრფელად.')] },
+  { stage: 4 },
+  { who: 'me', tk: [W('Where do you go?', 'სად დადიხარ ხოლმე?')] },
   { stage: 5 },
   { typing: true },
   { who: 'them', tk: [['w', 'demo_text']] },
@@ -183,7 +191,7 @@ function demoRow({ who, tk }) {
     k === 'e' ? h('span', { class: 'e' }, v)
       : k === 'p' ? h('span', { class: 'card' }, PHRASE_MAP[v][lang])
         : k === 'g' ? h('img', { class: 'gif-msg', src: v, width: 88, height: 88, alt: '', referrerpolicy: 'no-referrer' })
-          : h('span', {}, t(v))))
+          : k === 't' ? h('span', {}, v[lang]) : h('span', {}, t(v))))
   return h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: '--hue: 300' }), bubble)
 }
 
@@ -657,9 +665,9 @@ function cleanTokens(tk, stage) {
     if (x.k === 'e' && EMOJI_SET.has(x.v)) out.push({ k: 'e', v: x.v })
     else if (x.k === 'p' && stage >= 2 && PHRASE_MAP[x.v]) out.push({ k: 'p', v: x.v })
     else if (x.k === 'g' && stage >= 3 && GIF_OK.test(x.v) && x.v.length < 300 && ++gifs <= 1) out.push({ k: 'g', v: x.v, e: typeof x.e === 'string' ? x.e.slice(0, 8) : '', w: dim(x.w), h: dim(x.h) })
-    else if (x.k === 'w' && stage >= 4 && ++texts <= 1) {
+    else if (x.k === 'w' && ++texts <= 1) {
       const v = x.v.trim()
-      if (!v || (stage === 4 ? !validWhisper(v) : v.length > 200)) return null
+      if (!v || (stage < 5 ? !validWords(v, WORDS[stage]) : v.length > 200)) return null
       out.push({ k: 'w', v })
     } else return null
   }
@@ -668,6 +676,8 @@ function cleanTokens(tk, stage) {
 // Whisper: up to 3 words. Anything goes except numbers and links, so nobody can swap
 // phone numbers or handles before both players agree to talk freely.
 const dim = n => (Number.isFinite(+n) && +n > 0 ? Math.min(2000, Math.round(+n)) : 0)
+const noContacts = s => !/[0-9０-９@#/\\]|https?:|www\.|\.(com|net|org|io|me|app|ge|ru|co|gg|ly|tv|xyz)\b/i.test(s)
+const validWords = (s, n) => s.length <= n * 24 && wordCount(s) <= n && noContacts(s)
 function validWhisper(s) {
   return s.length <= 30 && s.split(/\s+/).filter(Boolean).length <= 3 &&
     !/[0-9０-９@#/\\]|https?:|www\.|\.(com|net|org|io|me|app|ge|ru|co|gg|ly|tv|xyz)\b/i.test(s)
@@ -682,32 +692,31 @@ function addToken(tok) {
 }
 
 function renderTray() {
-  const box = $('#tokens')
-  box.replaceChildren(...G.tokens.map((tok, i) =>
-    h('button', { class: `tok tok-${tok.k}`, 'aria-label': t('clear'), onclick: () => { G.tokens.splice(i, 1); renderTray() } },
-      tok.k === 'e' ? tok.v : tok.k === 'p' ? PHRASE_MAP[tok.v][lang] : tok.k === 'g' ? h('img', { src: tok.thumb || tok.v, alt: '', referrerpolicy: 'no-referrer' }) : tok.v)))
-  box.dataset.hint = t('tray_hint')
-  const input = $('#textIn')
-  const textOn = G.view.stage >= 4
-  input.hidden = !textOn
-  input.placeholder = G.view.stage >= 5 ? t('free_ph') : t('whisper_ph')
-  input.maxLength = G.view.stage >= 5 ? 200 : 30
-  $('#sendBtn').disabled = !G.tokens.length && !(textOn && input.value.trim())
-  $('#tray').classList.toggle('has-text', textOn)
+  const input = $('#textIn'), st = G.view.stage
+  input.hidden = false
+  input.placeholder = st >= 5 ? t('free_ph') : `${t('s' + st)}…`
+  input.maxLength = st >= 5 ? 200 : WORDS[st] * 24
+  updateCount()
+}
+function updateCount() {
+  const input = $('#textIn'), st = G.view.stage, n = wordCount(input.value), lim = WORDS[st]
+  const el = $('#wordCount')
+  el.hidden = st >= 5
+  el.textContent = `${n}/${lim}`
+  el.classList.toggle('over', n > lim)
+  $('#sendBtn').disabled = !input.value.trim() || n > lim
 }
 
 function sendMessage() {
   if (!G || G.ended || !G.them) return
   if (now() - G.lastSend < 600) return
   const input = $('#textIn')
-  const raw = [...G.tokens.map(({ k, v, e, w, h }) => (k === 'g' ? { k, v, e, w, h } : { k, v }))]
-  const text = G.view.stage >= 4 ? input.value.trim() : ''
-  if (text) raw.push({ k: 'w', v: text })
-  if (!raw.length) return
-  const tk = cleanTokens(raw, G.view.stage)
+  const text = input.value.trim()
+  if (!text) return
+  const tk = cleanTokens([{ k: 'w', v: text }], G.view.stage)
   if (!tk) {
     bump(input)
-    toast(t('whisper_err'))
+    toast(noContacts(text) ? t('words_err', { n: WORDS[G.view.stage] }) : t('contacts_err'))
     return
   }
   G.lastSend = now()
@@ -726,7 +735,7 @@ addEventListener('keydown', e => {
   if (G?.tokens.length) { e.preventDefault(); sendMessage() }
 })
 $('#textIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage() } })
-$('#textIn').addEventListener('input', () => { $('#sendBtn').disabled = !G.tokens.length && !$('#textIn').value.trim() })
+$('#textIn').addEventListener('input', () => G && updateCount())
 
 // ---------------------------------------------------------------- composer tabs + panels
 
@@ -817,7 +826,7 @@ function addBubble(who, id, tk) {
         width: Math.round(gw * k), height: Math.round(gh * k),
         onload: () => { const f = $('#feed'); f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' }) } }))
       G.story.push(x.e || '🎞️')
-    } else if (x.k === 'w') bubble.append(h('span', { class: 'w' }, hideLinks(x.v)))
+    } else if (x.k === 'w') { bubble.append(h('span', { class: 'w' }, hideLinks(x.v))); G.story.push(hideLinks(x.v)) }
   }
   const row = h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: `--hue:${G.hue}` }), bubble)
   if (who === 'them') {
@@ -858,7 +867,6 @@ function addReaction(id, e, whose, by = 'them') {
   const bubble = $('#feed').querySelector(sel)
   if (!bubble || bubble.querySelector(`.react.${by}`)) return false
   bubble.append(h('span', { class: `react ${by}` }, e))
-  G.story.push(e)
   return true
 }
 
@@ -869,7 +877,7 @@ function showJinx(id, opts) {
   G.jinx = { id, mine: null }
   const card = h('div', { class: 'jinx', 'data-jinx': id },
     h('p', { class: 'jinx-title' }, t('jinx_title')),
-    h('div', { class: 'jinx-opts' }, opts.map(o => h('button', { class: 'jinx-opt', 'data-o': o, onclick: () => pickJinx(id, o) }, o))),
+    h('div', { class: 'jinx-opts' }, opts.map(o => h('button', { class: 'jinx-opt', 'data-o': o, onclick: () => pickJinx(id, o) }, jw(o)))),
     h('p', { class: 'jinx-status' }),
     h('span', { class: 'jinx-timer' }))
   pushFeed(card)
@@ -891,12 +899,12 @@ function revealJinx(res) {
   const mine = G.host ? res.host : res.guest, theirs = G.host ? res.guest : res.host
   card.classList.add('done', res.hit ? 'hit' : 'miss')
   card.querySelector('.jinx-opts').replaceChildren(
-    h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('you')), h('span', { class: 'jinx-pick' }, mine)),
+    h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('you')), h('span', { class: 'jinx-pick' }, jw(mine))),
     h('div', { class: 'jinx-vs' }, res.hit ? '=' : '≠'),
-    h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('stranger')), h('span', { class: 'jinx-pick' }, theirs)))
+    h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('stranger')), h('span', { class: 'jinx-pick' }, jw(theirs))))
   card.querySelector('.jinx-status').textContent = res.hit ? t('jinx_hit') : t('jinx_miss')
   if (res.hit) { confetti(); vibrate([20, 40, 20]) }
-  if (typeof mine === 'string') G.story.push(mine)
+  
   G.jinx = null
 }
 function removeJinx(id) {
@@ -957,7 +965,7 @@ function toast(text) {
 function renderPostcard(why) {
   const v = G.view
   const dur = now() - (G.connectedAt || G.startedAt)
-  const story = G.story.slice(-48)
+  const story = G.story.slice(0, 10)
   const flag = flagOf(G.them?.cc) || '🌍'
   $('#postcard').replaceChildren(...[
     h('p', { class: 'pc-kicker' }, t('the_end')),
@@ -972,10 +980,10 @@ function renderPostcard(why) {
       h('div', {}, h('p', { class: 'pc-kicker' }, t('reached')), h('p', { class: 'pc-stage-name' }, t('s' + G.maxStage)))),
     h('div', { class: 'pc-stats' },
       stat(mmss(dur), t('stat_time')), stat(v.volleys, t('stat_volleys')), stat(v.jinxes, t('stat_jinx'))),
-    story.length > 0 && h('div', { class: 'pc-story' }, h('p', { class: 'pc-kicker' }, t('story')), h('p', { class: 'pc-strip' }, story.join(''))),
+    story.length > 0 && h('div', { class: 'pc-story' }, h('p', { class: 'pc-kicker' }, t('story')), h('p', { class: 'pc-strip' }, story.join(' · '))),
   ].filter(Boolean))
   $('#shareBtn').onclick = () =>
-    share(t('share_text', { brand: CONFIG.BRAND, stage: `${STAGE_ICON[G.maxStage]} ${t('s' + G.maxStage)}`, emoji: story.slice(0, 12).join('') }), $('#shareBtn'))
+    share(t('share_text', { brand: CONFIG.BRAND, stage: t('s' + G.maxStage), emoji: '' }), $('#shareBtn'))
 }
 const stat = (n, label) => h('div', { class: 'stat' }, h('b', {}, String(n)), h('span', {}, label))
 

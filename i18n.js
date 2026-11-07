@@ -8,7 +8,7 @@ export const STR = {
   en: {
     tagline: 'Meet a stranger. Earn your words.',          // landing, under the logo
     sub: 'Every chat starts as a silent film.',            // landing, small line
-    lead: 'Start with emoji. Take turns to unlock words.',  // landing, under the headline
+    lead: 'Start with one word. Take turns to earn more.',  // landing, under the headline
     demo_text: 'Okay, this is fun',                        // landing demo, the free-chat message
     stage_of: 'Stage {n} of 5',                            // match header, {n} = current stage
     find: 'Find a stranger',                               // landing, main button
@@ -30,7 +30,7 @@ export const STR = {
     cancel: 'Cancel',
     connecting: 'Connecting…',                             // match, before the hello arrives
     intro_title: 'You’re connected',                       // match, welcome card title
-    intro_hint: 'Say hi with an emoji',                    // match, welcome card hint
+    intro_hint: 'You have one word. Make it count.',                    // match, welcome card hint
     next: 'Next',                                          // match, skip button
     stranger: 'Stranger',
     jinx_title: 'Same pick?',                              // jinx card title
@@ -38,8 +38,8 @@ export const STR = {
     jinx_miss: 'Different taste',                          // picks differ
     jinx_wait: 'Waiting for them…',                        // I picked, they haven't
     hint: 'Take turns to unlock the next one',             // spark meter caption
-    s1: 'Silent', s2: 'Title cards', s3: 'Reels', s4: 'Whisper', s5: 'Free chat',            // stage names
-    d1: 'Emoji only', d2: 'Words and phrases', d3: 'GIFs', d4: '3 words of text', d5: 'Say anything', // stage descriptions
+    s1: 'One word', s2: 'Two words', s3: 'Three words', s4: 'Five words', s5: 'Free chat',            // stage names
+    d1: '1 word per message', d2: '2 words per message', d3: '3 words per message', d4: '5 words per message', d5: 'Say anything', // stage descriptions
     unlocked: 'Unlocked',                                  // level-up overlay
     next_unlock: 'Next:',                                  // progress bar, before the next stage name
     consent_ask: 'Open free chat? You both have to agree', // stage 4 → 5 gate
@@ -49,6 +49,8 @@ export const STR = {
     whisper_ph: 'Up to 3 words…',                          // text input, stage 4
     free_ph: 'Say anything…',                              // text input, stage 5
     whisper_err: 'Up to 3 words, no numbers or links',
+    words_err: 'Word limit right now: {n}',               // composer, too many words; {n} = limit
+    contacts_err: 'No numbers or links before free chat',  // composer, digits or links before stage 5
     gif_search: 'Search GIFs',
     tray_hint: 'Tap below to build a message',            // empty message tray, stages 1–3
     tab_emoji: 'Emoji', tab_phrases: 'Phrases', tab_gif: 'GIFs', tab_text: 'Text', // tab labels (also aria)
@@ -70,7 +72,7 @@ export const STR = {
   ka: {
     tagline: 'გაიცანით უცნობი. დაიმსახურეთ სიტყვები.',
     sub: 'ყველა საუბარი მუნჯი კინოთი იწყება.',
-    lead: 'დაიწყეთ ემოჯით. მონაცვლეობით გახსენით სიტყვები.',
+    lead: 'დაიწყეთ ერთი სიტყვით. მონაცვლეობით დაიმსახურეთ მეტი.',
     demo_text: 'კარგი, ეს მართლა მაგარია',
     stage_of: 'ეტაპი {n} / 5',
     find: 'უცნობის პოვნა',
@@ -92,7 +94,7 @@ export const STR = {
     cancel: 'გაუქმება',
     connecting: 'დაკავშირება…',
     intro_title: 'დაკავშირდით',
-    intro_hint: 'მიესალმეთ ემოჯით',
+    intro_hint: 'ერთი სიტყვა გაქვთ. კარგად შეარჩიეთ.',
     next: 'შემდეგი',
     stranger: 'უცნობი',
     jinx_title: 'დაემთხვევა?',
@@ -100,8 +102,8 @@ export const STR = {
     jinx_miss: 'სხვადასხვა გემოვნება',
     jinx_wait: 'უცნობს ველოდებით…',
     hint: 'მონაცვლეობით გაგზავნეთ და შემდეგი გაიხსნება',
-    s1: 'მუნჯი', s2: 'ტიტრები', s3: 'კადრები', s4: 'ჩურჩული', s5: 'თავისუფალი ჩატი',
-    d1: 'მხოლოდ ემოჯი', d2: 'სიტყვები და ფრაზები', d3: 'GIF‑ები', d4: 'ტექსტი, მაქსიმუმ 3 სიტყვა', d5: 'თქვით, რაც გინდათ',
+    s1: 'ერთი სიტყვა', s2: 'ორი სიტყვა', s3: 'სამი სიტყვა', s4: 'ხუთი სიტყვა', s5: 'თავისუფალი ჩატი',
+    d1: 'შეტყობინებაში 1 სიტყვა', d2: 'შეტყობინებაში 2 სიტყვა', d3: 'შეტყობინებაში 3 სიტყვა', d4: 'შეტყობინებაში 5 სიტყვა', d5: 'თქვით, რაც გინდათ',
     unlocked: 'გაიხსნა',
     next_unlock: 'შემდეგი:',
     consent_ask: 'გავხსნათ თავისუფალი ჩატი? საჭიროა ორივეს თანხმობა',
@@ -111,6 +113,8 @@ export const STR = {
     whisper_ph: 'მაქსიმუმ 3 სიტყვა…',
     free_ph: 'დაწერეთ რამე…',
     whisper_err: 'მაქსიმუმ 3 სიტყვა, ციფრებისა და ბმულების გარეშე',
+    words_err: 'სიტყვების ლიმიტი ახლა: {n}',
+    contacts_err: 'ციფრები და ბმულები თავისუფალ ჩატამდე არ შეიძლება',
     gif_search: 'GIF‑ების ძიება',
     tray_hint: 'შეტყობინება ქვემოთ ააწყვეთ',
     tab_emoji: 'ემოჯი', tab_phrases: 'ფრაზები', tab_gif: 'GIF‑ები', tab_text: 'ტექსტი',

@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=8">
-  <script type="module" src="app.js?v=8"></script>
+  <link rel="stylesheet" href="style.css?v=9">
+  <script type="module" src="app.js?v=9"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -139,12 +139,13 @@
         <div class="composer">
           <div id="consent" class="consent" hidden></div>
           <div id="tray" class="tray">
-            <div id="tokens" class="tokens"></div>
-            <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" hidden>
+            <div id="tokens" class="tokens" hidden></div>
+            <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send">
+            <span id="wordCount" class="word-count"></span>
             <button id="sendBtn" class="send" type="button" disabled aria-label="Send"><span class="ico" data-icon="send"></span></button>
           </div>
-          <nav id="tabs" class="tabs"></nav>
-          <div id="panel" class="panel"></div>
+          <nav id="tabs" class="tabs" hidden></nav>
+          <div id="panel" class="panel" hidden></div>
         </div>
       </div>
     </div>
