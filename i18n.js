@@ -29,13 +29,14 @@ export const STR = {
     s1: 'Silent', s2: 'Title cards', s3: 'Reels', s4: 'Whisper', s5: 'Talkie',            // stage names
     d1: 'Emoji only', d2: 'Words and phrases', d3: 'GIFs', d4: '3 words of text', d5: 'Say anything', // stage descriptions
     unlocked: 'Unlocked',                                  // level-up overlay
+    next_unlock: 'Next:',                                  // progress bar, before the next stage name
     consent_ask: 'Go full talkie? You both have to agree', // stage 4 → 5 gate
     consent_btn: 'I’m in',
     consent_wait: 'You’re in. Waiting for them…',
     consent_them: 'They’re in',
     whisper_ph: 'Up to 3 words…',                          // text input, stage 4
     free_ph: 'Say anything…',                              // text input, stage 5
-    whisper_err: 'Letters only, up to 3 words',
+    whisper_err: 'Up to 3 words, no numbers or links',
     gif_search: 'Search GIFs',
     tray_hint: 'Tap below to build a message',            // empty message tray, stages 1–3
     tab_emoji: 'Emoji', tab_phrases: 'Phrases', tab_gif: 'GIFs', tab_text: 'Text', // tab labels (also aria)
@@ -78,13 +79,14 @@ export const STR = {
     s1: 'მუნჯი', s2: 'ტიტრები', s3: 'კადრები', s4: 'ჩურჩული', s5: 'ხმოვანი',
     d1: 'მხოლოდ ემოჯი', d2: 'სიტყვები და ფრაზები', d3: 'GIF-ები', d4: 'ტექსტი, მაქსიმუმ 3 სიტყვა', d5: 'თქვით, რაც გინდათ',
     unlocked: 'გაიხსნა',
+    next_unlock: 'შემდეგი:',
     consent_ask: 'ხმოვან რეჟიმზე გადავიდეთ? საჭიროა ორივეს თანხმობა',
     consent_btn: 'თანახმა ვარ',
     consent_wait: 'თანახმა ხართ. უცნობს ველოდებით…',
     consent_them: 'უცნობი თანახმაა',
     whisper_ph: 'მაქსიმუმ 3 სიტყვა…',
     free_ph: 'დაწერეთ რამე…',
-    whisper_err: 'მხოლოდ ასოები, მაქსიმუმ 3 სიტყვა',
+    whisper_err: 'მაქსიმუმ 3 სიტყვა, ციფრებისა და ბმულების გარეშე',
     gif_search: 'GIF-ების ძიება',
     tray_hint: 'შეტყობინება ქვემოთ ააწყვეთ',
     tab_emoji: 'ემოჯი', tab_phrases: 'ფრაზები', tab_gif: 'GIF-ები', tab_text: 'ტექსტი',

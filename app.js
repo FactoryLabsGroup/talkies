@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=2'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=2'
-import { Net } from './net.js?v=2'
+import { CONFIG } from './config.js?v=3'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=3'
+import { Net } from './net.js?v=3'
 
 // ---------------------------------------------------------------- content
 
@@ -107,8 +107,30 @@ function renderCount() {
 
 // ---------------------------------------------------------------- network
 
+// ?debug shows a small panel with this tab's id, its partner, role, stage and the last messages.
+const DEBUG = new URLSearchParams(location.search).has('debug')
+const dbgLog = []
+const short = id => (id ? String(id).slice(0, 5) : '—')
+function onDebug(dir, m, ok, peer) {
+  if (!DEBUG || !m || m.t === 's' && dir === '→' && dbgLog.at(-1)?.startsWith('→s')) return
+  const what = m.t === 'm' ? `m[${(m.tk || []).map(x => x.k).join('')}]` : m.t
+  dbgLog.push(`${dir}${what}${ok ? '' : ' ✗' + short(peer)}`)
+  if (dbgLog.length > 14) dbgLog.shift()
+  console.debug('[talkies]', dir, m, ok ? '' : `(not partner: ${peer})`)
+  renderDebug()
+}
+function renderDebug() {
+  if (!DEBUG) return
+  let el = $('#debug')
+  if (!el) { el = h('pre', { id: 'debug', class: 'debug' }); document.body.append(el) }
+  const peers = [...net.peers].map(([id, s]) => `${short(id)}:${s}`).join(' ')
+  el.textContent = `me ${short(net.id)} · ${G && !G.ended ? (G.host ? 'host' : 'guest') + ' · stage ' + G.view.stage : net.status}\n` +
+    `partner ${short(net.partner)}\nlobby ${peers || '—'}\n` + dbgLog.join('\n')
+}
+
 const net = new Net({
-  onCount: n => { online = n; renderCount() },
+  onDebug,
+  onCount: n => { online = n; renderCount(); renderDebug() },
   onMatch: (partner, isHost) => startMatch(partner, isHost),
   onGame: msg => onGame(msg),
   onPartnerGone: () => endMatch('left'),
@@ -126,7 +148,7 @@ function startSearch() {
   const faces = ['😶', '🤔', '👀', '🙃', '😮', '🤫', '👋']
   let i = 0
   searchTimers = [
-    setInterval(() => ($('#searchEmoji').textContent = faces[++i % faces.length]), 700),
+    setInterval(() => ($('#searchEmoji').textContent = faces[++i % faces.length]), 1400),
     setTimeout(() => ($('#quiet').hidden = false), 20000),
   ]
 }
@@ -415,26 +437,21 @@ function renderThem() {
   ].filter(Boolean))
 }
 
+// One progress bar for the whole ladder: finished stages are full, the current stage fills
+// with spark as you take turns, later stages are empty.
 function renderLadder() {
-  const ol = $('#ladder')
-  ol.replaceChildren(...[1, 2, 3, 4, 5].map(i =>
-    h('li', { class: i < G.view.stage ? 'done' : i === G.view.stage ? 'now' : '', title: t('s' + i), style: `--c: var(--s${i})` },
-      h('span', { class: 'ico' }, STAGE_ICON[i]),
-      i === G.view.stage && h('span', { class: 'name' }, t('s' + i)))))
+  const v = G.view
+  $('#ladder').replaceChildren(...[1, 2, 3, 4, 5].map(i => {
+    const fill = i < v.stage || v.stage >= 5 ? 1 : i === v.stage ? Math.min(1, v.spark / (v.need || 1)) : 0
+    return h('span', { class: 'seg', title: t('s' + i), style: `--c: var(--s${i}); --f: ${fill}` })
+  }))
+  $('#stageName').textContent = `${STAGE_ICON[v.stage]} ${t('s' + v.stage)}`
+  $('#stageNext').textContent = v.stage < 5 ? `${t('next_unlock')} ${STAGE_ICON[v.stage + 1]} ${t('s' + (v.stage + 1))}` : t('d5')
 }
 
 function renderMeter() {
-  const v = G.view
-  const dots = $('#dots')
-  if (v.stage >= 5) {
-    dots.replaceChildren(h('span', { class: 'free' }, '🗣️ ' + t('d5')))
-    $('#meterText').textContent = ''
-    return
-  }
-  dots.replaceChildren(...Array.from({ length: v.need }, (_, i) => h('i', { class: i < v.spark ? 'on' : '' })),
-    h('span', { class: 'next-ico' }, STAGE_ICON[v.stage + 1]))
-  dots.style.setProperty('--c', `var(--s${v.stage + 1})`)
-  $('#meterText').textContent = t('hint')
+  renderLadder()
+  $('#meterText').textContent = G.view.stage < 5 && !G.view.ac ? t('hint') : ''
 }
 
 function renderConsent() {
@@ -486,8 +503,11 @@ function cleanTokens(tk, stage) {
   }
   return out
 }
+// Whisper: up to 3 words. Anything goes except numbers and links, so nobody can swap
+// phone numbers or handles before both players agree to talk freely.
 function validWhisper(s) {
-  return s.length <= 24 && s.split(/\s+/).filter(Boolean).length <= 3 && /^[\p{L}\p{M}\s'’!?.,-]+$/u.test(s)
+  return s.length <= 30 && s.split(/\s+/).filter(Boolean).length <= 3 &&
+    !/[0-9０-９@#/\\]|https?:|www\.|\.(com|net|org|io|me|app|ge|ru|co|gg|ly|tv|xyz)\b/i.test(s)
 }
 
 function addToken(tok) {
@@ -508,7 +528,7 @@ function renderTray() {
   const textOn = G.view.stage >= 4
   input.hidden = !textOn
   input.placeholder = G.view.stage >= 5 ? t('free_ph') : t('whisper_ph')
-  input.maxLength = G.view.stage >= 5 ? 200 : 24
+  input.maxLength = G.view.stage >= 5 ? 200 : 30
   $('#sendBtn').disabled = !G.tokens.length && !(textOn && input.value.trim())
   $('#tray').classList.toggle('has-text', textOn)
 }
@@ -557,13 +577,13 @@ function renderTabs() {
       'aria-label': open ? t(tab.label) : `${t(tab.label)} · ${t('locked')}`,
       style: `--c: var(--s${tab.stage})`,
       onclick: () => {
-        if (!open) return bump($('#dots'))
+        if (!open) return bump($('#ladder'))
         if (tab.id === 'text') { $('#textIn').focus(); return }
         G.tab = tab.id
         renderTabs()
         renderPanel()
       },
-    }, open ? tab.ico : '🔒', h('span', {}, t(tab.label)))
+    }, t(tab.label))
   }))
 }
 
@@ -701,10 +721,10 @@ function revealJinx(res) {
   card.classList.add('done', res.hit ? 'hit' : 'miss')
   card.querySelector('.jinx-opts').replaceChildren(
     h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('you')), h('span', { class: 'jinx-pick' }, mine)),
-    h('div', { class: 'jinx-vs' }, res.hit ? '⚡' : '·'),
+    h('div', { class: 'jinx-vs' }, res.hit ? '=' : '≠'),
     h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, G.ava), h('span', { class: 'jinx-pick' }, theirs)))
   card.querySelector('.jinx-status').textContent = res.hit ? t('jinx_hit') : t('jinx_miss')
-  if (res.hit) { confetti([mine, '✨', '⚡', '🎉']); vibrate([20, 40, 20]) }
+  if (res.hit) { confetti(); vibrate([20, 40, 20]) }
   if (typeof mine === 'string') G.story.push(mine)
   G.jinx = null
 }
@@ -720,23 +740,26 @@ function removeJinx(id) {
 function levelUpFx(stage) {
   const o = $('#overlay')
   o.style.setProperty('--c', `var(--s${stage})`)
-  o.replaceChildren(
+  o.replaceChildren(h('div', { class: 'lv-card' },
     h('div', { class: 'lv-ico' }, STAGE_ICON[stage]),
     h('p', { class: 'lv-kicker' }, t('unlocked')),
     h('p', { class: 'lv-name' }, t('s' + stage)),
-    h('p', { class: 'lv-desc' }, t('d' + stage)))
+    h('p', { class: 'lv-desc' }, t('d' + stage))))
   o.hidden = false
   o.classList.remove('play'); void o.offsetWidth; o.classList.add('play')
-  confetti([STAGE_ICON[stage], '✨', '🎉'])
+  confetti()
   vibrate([30, 50, 30])
   clearTimeout(levelUpFx.t)
   levelUpFx.t = setTimeout(() => (o.hidden = true), 1900)
 }
 
-function confetti(chars) {
+// Paper confetti in the stage colors.
+const CONFETTI = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)']
+function confetti() {
   const layer = $('#confetti')
-  for (let i = 0; i < 18; i++) {
-    const s = h('span', { class: 'bit' }, pick(chars))
+  for (let i = 0; i < 16; i++) {
+    const s = h('span', { class: 'bit' })
+    s.style.background = pick(CONFETTI)
     s.style.setProperty('--x', `${(Math.random() - 0.5) * 120}vw`)
     s.style.setProperty('--y', `${-30 - Math.random() * 60}vh`)
     s.style.setProperty('--r', `${(Math.random() - 0.5) * 720}deg`)

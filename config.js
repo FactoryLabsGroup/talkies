@@ -5,7 +5,7 @@ export const CONFIG = {
 
   // Free key from https://developers.giphy.com/dashboard/ (Create an App → API).
   // Left empty, stage 3 uses Google's animated emoji GIFs instead.
-  GIPHY_API_KEY: '',
+  GIPHY_API_KEY: 'jjXHceyxyVgAsEeqoxpw1gyssOsWEEDz',
 
   // Optional TURN servers for networks that block direct peer-to-peer, e.g.
   // [{ urls: 'turn:turn.example.com:3478', username: 'u', credential: 'p' }]

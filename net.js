@@ -3,7 +3,7 @@
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=2'
+import { CONFIG } from './config.js?v=3'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
@@ -29,7 +29,9 @@ export class Net {
   start() {
     const cfg = { appId: APP_ID }
     if (CONFIG.TURN?.length) cfg.turnConfig = CONFIG.TURN
-    this.room = joinRoom(cfg, CONFIG.LOBBY)
+    // Local copies (localhost) use their own lobby so testing never pairs with real visitors.
+    const local = /^(localhost|127\.|\[::1\])/.test(location.hostname)
+    this.room = joinRoom(cfg, CONFIG.LOBBY + (local ? '-dev' : ''))
     this.st = this.room.makeAction('st')
     this.mm = this.room.makeAction('mm')
     this.g = this.room.makeAction('g')
@@ -54,7 +56,9 @@ export class Net {
     }
     this.mm.onMessage = (m, { peerId }) => this.onHandshake(m, peerId)
     this.g.onMessage = (m, { peerId }) => {
-      if (peerId === this.partner && m && typeof m === 'object') this.h.onGame(m)
+      const mine = peerId === this.partner
+      this.h.onDebug?.('←', m, mine, peerId)
+      if (mine && m && typeof m === 'object') this.h.onGame(m)
     }
   }
 
@@ -132,6 +136,7 @@ export class Net {
   }
 
   send(msg) {
+    this.h.onDebug?.('→', msg, !!this.partner, this.partner)
     if (this.partner) this.g.send(msg, { target: this.partner })
   }
 
