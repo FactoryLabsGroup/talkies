@@ -3,10 +3,11 @@
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js'
+import { CONFIG } from './config.js?v=2'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
+const REMATCH_AFTER_MS = 6000
 const STATUSES = ['idle', 'search', 'busy']
 
 const nonce = () => Math.random().toString(36).slice(2, 10)
@@ -18,6 +19,7 @@ export class Net {
     this.status = 'idle'
     this.peers = new Map()     // peerId → status
     this.recent = new Set()    // partners already met this session
+    this.searchSince = 0
     this.pending = null        // my outgoing proposal { to, n, t }
     this.reserved = null       // incoming proposal I accepted { by, n, t }
     this.partner = null
@@ -65,6 +67,7 @@ export class Net {
 
   search() {
     this.setStatus('search')
+    this.searchSince = Date.now()
     clearInterval(this.timer)
     this.timer = setInterval(() => this.tick(), 600)
   }
@@ -82,9 +85,10 @@ export class Net {
     if (this.reserved && now - this.reserved.t > HANDSHAKE_MS) this.reserved = null
     if (this.pending || this.reserved) return
     if (Math.random() < 0.3) return // jitter so two searchers don't always collide
-    const candidates = [...this.peers]
-      .filter(([id, s]) => s === 'search' && !this.recent.has(id))
-      .map(([id]) => id)
+    const searching = [...this.peers].filter(([, s]) => s === 'search').map(([id]) => id)
+    const fresh = searching.filter(id => !this.recent.has(id))
+    // Prefer someone new. If nobody new turns up for a few seconds, meet an old partner again.
+    const candidates = fresh.length ? fresh : now - this.searchSince > REMATCH_AFTER_MS ? searching : []
     if (!candidates.length) return
     const to = candidates[Math.floor(Math.random() * candidates.length)]
     this.pending = { to, n: nonce(), t: now }
@@ -96,7 +100,7 @@ export class Net {
     const reply = k => this.mm.send({ k, n: m.n }, { target: from })
 
     if (m.k === 'p') {
-      const free = this.status === 'search' && !this.reserved && !this.recent.has(from)
+      const free = this.status === 'search' && !this.reserved
       // Two people proposing to each other at once: the higher id gives way and accepts.
       const crossed = this.pending?.to === from && this.id > from
       if (free && (!this.pending || crossed)) {

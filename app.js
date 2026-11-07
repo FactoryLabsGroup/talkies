@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js'
-import { Net } from './net.js'
+import { CONFIG } from './config.js?v=2'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=2'
+import { Net } from './net.js?v=2'
 
 // ---------------------------------------------------------------- content
 
@@ -246,11 +246,21 @@ function onGame(m) {
       break
     }
     case 'm': {
-      const stage = H ? H.stage : G.view.stage
-      const tk = cleanTokens(m.tk, stage)
-      if (!tk || typeof m.id !== 'string') return
-      addBubble('them', m.id.slice(0, 12), tk)
+      // The sender already enforced its stage. Here we only check the message is safe, so a
+      // brief stage mismatch between the two screens can never make a message disappear.
+      if (typeof m.id !== 'string') return
+      const id = m.id.slice(0, 12)
+      const tk = cleanTokens(m.tk, 5)
+      if (!tk) return
+      net.send({ t: 'ack', id })
+      if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
+      addBubble('them', id, tk)
       if (H) score('them')
+      break
+    }
+    case 'ack': {
+      const b = $('#feed').querySelector(`.row.me .bubble[data-id="${CSS.escape(String(m.id))}"]`)
+      b?.classList.add('sent')
       break
     }
     case 'r': {
@@ -361,16 +371,22 @@ function hostJinxPick(who, id, choice) {
 
 // ---------------------------------------------------------------- view state
 
+// The host re-sends state every 2 s. Only redraw what changed, so a tap that lands during a
+// sync is never swallowed by the picker or buttons being rebuilt under the finger.
 function applyState(s) {
-  const prev = G.view.stage
+  const prev = G.view
   G.view = { ...s }
   G.fuseEnd = now() + s.fuse
-  if (s.stage > prev) {
-    G.maxStage = Math.max(G.maxStage, s.stage)
-    levelUpFx(s.stage)
-    G.tab = s.stage === 2 ? 'phrases' : s.stage === 3 ? 'gif' : G.tab
+  if (s.stage !== prev.stage) {
+    if (s.stage > prev.stage) {
+      G.maxStage = Math.max(G.maxStage, s.stage)
+      levelUpFx(s.stage)
+      G.tab = s.stage === 2 ? 'phrases' : s.stage === 3 ? 'gif' : G.tab
+    }
+    return renderAll()
   }
-  renderAll()
+  if (s.spark !== prev.spark || s.need !== prev.need) renderMeter()
+  if (s.ac !== prev.ac || String(s.cons) !== String(prev.cons)) renderConsent()
 }
 
 function renderAll() {
@@ -608,7 +624,8 @@ function addBubble(who, id, tk) {
       const translated = who === 'them' && G.them?.lang !== lang
       bubble.append(h('span', { class: 'card' }, PHRASE_MAP[x.v][lang], translated && h('sup', { title: t('translated') }, '🌐')))
     } else if (x.k === 'g') {
-      bubble.append(h('img', { class: 'gif-msg', src: x.v, alt: x.e || 'GIF', referrerpolicy: 'no-referrer' }))
+      bubble.append(h('img', { class: 'gif-msg', src: x.v, alt: x.e || 'GIF', referrerpolicy: 'no-referrer',
+        onload: () => { const f = $('#feed'); f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' }) } }))
       G.story.push(x.e || '🎞️')
     } else if (x.k === 'w') bubble.append(h('span', { class: 'w' }, hideLinks(x.v)))
   }
