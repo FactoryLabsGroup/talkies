@@ -5,7 +5,7 @@
 // link, and whoever shows up there first becomes the partner.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=11'
+import { CONFIG } from './config.js?v=12'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000

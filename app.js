@@ -1,14 +1,15 @@
-import { CONFIG } from './config.js?v=11'
-import { STR, LANGS, LANG_NAME } from './i18n.js?v=11'
-import { Net } from './net.js?v=11'
+import { CONFIG } from './config.js?v=12'
+import { STR, LANGS, LANG_NAME } from './i18n.js?v=12'
+import { Net } from './net.js?v=12'
 
-// Talkies: two strangers start with GIFs only. After a short while they can switch to text,
-// but only if both agree.
+// Talkies: two strangers start with GIFs only. Once a minute has passed and both have sent a few
+// GIFs, they can switch to text, but only if both agree.
 
 // ---------------------------------------------------------------- content
 
 const FAST = new URLSearchParams(location.search).has('fast')
-const TEXT_AFTER = FAST ? 10000 : 60000   // how long the GIF-only part lasts
+const TEXT_AFTER = FAST ? 10000 : 60000   // how long the GIF-only part lasts at least
+const GIF_NEED = FAST ? 1 : 3              // and how many GIFs each side has to send first
 const TEXT_MAX = 300
 const AVATARS_HUE = () => Math.floor(Math.random() * 360)
 const REACTIONS = ['❤️', '😂', '😮', '👀']
@@ -308,11 +309,11 @@ function startMatch(partner, isHost) {
   clearTimeout(joinTimer)
   G = {
     partner, host: isHost, them: null, theyGotMine: false, ended: false, hue: AVATARS_HUE(),
-    view: { stage: 1, left: TEXT_AFTER, ac: false, cons: [false, false] },
+    view: { stage: 1, left: TEXT_AFTER, ac: false, cons: [false, false], gifs: [0, 0] },
     leftEnd: now() + TEXT_AFTER, startedAt: now(), connectedAt: 0, maxStage: 1,
     gifs: [], gifCount: 0, textCount: 0, lastSend: 0, timers: [], gifOpen: true,
   }
-  H = isHost ? { stage: 1, left: TEXT_AFTER, ac: false, cons: [false, false], last: now(), lastPush: 0 } : null
+  H = isHost ? { stage: 1, left: TEXT_AFTER, ac: false, cons: [false, false], gifs: [0, 0], last: now(), lastPush: 0 } : null
 
   $('#feed').replaceChildren()
   $('#textIn').value = ''
@@ -400,6 +401,7 @@ function onGame(m) {
       net.send({ t: 'ack', id })
       if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
       addBubble('them', id, tk)
+      if (H && tk[0].k === 'g') hostGif(1)
       break
     }
     case 'ack': $('#feed').querySelector(`.row.me .bubble[data-id="${CSS.escape(String(m.id))}"]`)?.classList.add('sent'); break
@@ -415,9 +417,9 @@ function onGame(m) {
 function hostTick() {
   if (!G || G.ended || !G.them) return
   const tNow = now()
-  if (H.stage === 1 && !H.ac) {
+  if (H.stage === 1 && H.left > 0) {
     H.left -= tNow - H.last
-    if (H.left <= 0) { H.left = 0; H.ac = true; push() }
+    if (H.left <= 0) { H.left = 0; checkReady(); push() }
   }
   H.last = tNow
   if (tNow - H.lastPush > 2000) push()
@@ -425,9 +427,21 @@ function hostTick() {
 
 function push() {
   H.lastPush = now()
-  const s = { t: 's', stage: H.stage, left: Math.max(0, H.left), ac: H.ac, cons: H.cons }
+  const s = { t: 's', stage: H.stage, left: Math.max(0, H.left), ac: H.ac, cons: H.cons, gifs: H.gifs }
   net.send(s)
   applyState(s)
+}
+
+// Text can be offered once the minute is up and both sides have sent enough GIFs.
+function checkReady() {
+  if (H.stage === 1 && !H.ac && H.left <= 0 && H.gifs[0] >= GIF_NEED && H.gifs[1] >= GIF_NEED) H.ac = true
+}
+// idx 0 = the host sent a GIF, 1 = the guest did.
+function hostGif(idx) {
+  if (H.stage !== 1) return
+  H.gifs[idx]++
+  checkReady()
+  push()
 }
 
 function hostConsent(idx) {
@@ -443,7 +457,8 @@ function hostConsent(idx) {
 // sync is never swallowed by buttons being rebuilt under the finger.
 function applyState(s) {
   const prev = G.view
-  G.view = { stage: s.stage === 2 ? 2 : 1, left: Math.max(0, +s.left || 0), ac: !!s.ac, cons: [!!s.cons?.[0], !!s.cons?.[1]] }
+  const n = i => Math.max(0, Math.min(99, Math.floor(+s.gifs?.[i] || 0)))
+  G.view = { stage: s.stage === 2 ? 2 : 1, left: Math.max(0, +s.left || 0), ac: !!s.ac, cons: [!!s.cons?.[0], !!s.cons?.[1]], gifs: [n(0), n(1)] }
   G.leftEnd = now() + G.view.left
   if (G.view.stage !== prev.stage) {
     if (G.view.stage > prev.stage) {
@@ -454,10 +469,12 @@ function applyState(s) {
     return renderAll()
   }
   if (G.view.ac !== prev.ac || String(G.view.cons) !== String(prev.cons)) renderConsent()
+  if (G.view.ac !== prev.ac || String(G.view.gifs) !== String(prev.gifs)) renderNeed()
 }
 
 function renderAll() {
   renderLadder()
+  renderNeed()
   renderConsent()
   renderComposer()
 }
@@ -497,16 +514,29 @@ function drawProgress() {
   if (!G || G.ended) return
   const v = G.view
   const left = v.stage >= 2 || v.ac ? 0 : G.them ? Math.max(0, G.leftEnd - now()) : TEXT_AFTER
+  const ready = v.stage >= 2 || v.ac
   const frac = 1 - left / TEXT_AFTER
   document.querySelectorAll('#match .fuse-fill').forEach(f => (f.style.transform = `scaleX(${frac})`))
-  const secs = left > 0 ? mmss(left) : v.stage >= 2 ? t('open') : t('ready')
+  const secs = left > 0 || !ready ? mmss(left) : v.stage >= 2 ? t('open') : t('ready')
   if ($('#fuseSecs').textContent !== secs) $('#fuseSecs').textContent = secs
-  const label = left > 0 ? t('text_label') : t('text_word')
+  const label = ready ? t('text_word') : t('text_label')
   if ($('#textLabel').textContent !== label) $('#textLabel').textContent = label
-  const hint = v.stage >= 2 ? t('d2') : left > 0 ? t('text_in', { time: mmss(left) }) : t('text_ready')
+  const mine = v.gifs[G.host ? 0 : 1]
+  const hint = v.stage >= 2 ? t('d2') : ready ? t('text_ready') : left > 0 ? t('text_in', { time: mmss(left) })
+    : mine < GIF_NEED ? t('need_mine', { n: GIF_NEED - mine }) : t('need_theirs')
   if ($('#meterText').textContent !== hint) $('#meterText').textContent = hint
-  $('#match').classList.toggle('ready', left <= 0)
+  $('#match').classList.toggle('ready', ready)
   G.raf = requestAnimationFrame(drawProgress)
+}
+
+// How many GIFs each side has sent toward unlocking text.
+function renderNeed() {
+  const v = G.view, el = $('#gifNeed')
+  el.hidden = v.stage >= 2 || v.ac
+  if (el.hidden) return
+  const group = (who, n) => h('span', { class: `need${n >= GIF_NEED ? ' done' : ''}` }, h('span', { class: 'need-who' }, who),
+    h('span', { class: 'need-dots' }, Array.from({ length: GIF_NEED }, (_, i) => h('i', { class: i < n ? 'on' : '' }))))
+  el.replaceChildren(group(t('you'), v.gifs[G.host ? 0 : 1]), group(t('stranger'), v.gifs[G.host ? 1 : 0]))
 }
 
 // Welcome card at the top of a fresh match.
@@ -517,7 +547,7 @@ function addIntro() {
     h('div', { class: 'intro-orbs' }, h('span', { class: 'ava you' }), h('span', { class: 'intro-link' }), h('span', { class: 'ava', style: `--hue:${G.hue}` })),
     h('p', { class: 'intro-title' }, t('intro_title')),
     h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'} ${LANG_NAME[l]}${time ? ' · ' + time : ''}`),
-    h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(TEXT_AFTER / 1000) }))))
+    h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(TEXT_AFTER / 1000), g: GIF_NEED }))))
 }
 
 function renderConsent() {
@@ -558,6 +588,7 @@ function sendTokens(tk) {
 
 function sendGif(g) {
   if (!sendTokens([{ k: 'g', v: g.url, w: g.w, h: g.h }])) return
+  if (H) hostGif(0)
   if (G.view.stage >= 2) { G.gifOpen = false; renderComposer() }
 }
 

@@ -24,7 +24,10 @@ export const STR = {
     cancel: 'Cancel',
     connecting: 'Connecting…',                             // match, before the hello arrives
     intro_title: 'You’re connected',                       // match, welcome card title
-    intro_hint: 'GIFs only for now. You can switch to text in {n} seconds', // welcome card, {n} = seconds
+    intro_hint: 'GIFs only for now. You can switch to text in {n} seconds if you each send at least {g} GIFs', // welcome card, {n} = seconds, {g} = GIFs per person
+    need_mine: 'Send {n} more GIFs to unlock text',       // match header, timer done, I haven't sent enough
+    need_theirs: 'Waiting for the stranger’s GIFs',        // match header, timer done, they haven't sent enough
+    you: 'You',
     next: 'Next',                                          // match, skip button (phone)
     next_stranger: 'Next stranger',
     stranger: 'Stranger',
@@ -76,7 +79,10 @@ export const STR = {
     cancel: 'გაუქმება',
     connecting: 'დაკავშირება…',
     intro_title: 'დაკავშირდით',
-    intro_hint: 'ჯერ მხოლოდ GIF‑ები. ტექსტზე გადასვლა {n} წამში შეგეძლებათ',
+    intro_hint: 'ჯერ მხოლოდ GIF‑ები. ტექსტზე გადასვლა {n} წამში შეგეძლებათ, თუ ორივე მინიმუმ {g} GIF‑ს გაგზავნით',
+    need_mine: 'ტექსტის გასახსნელად გაგზავნეთ კიდევ {n} GIF',
+    need_theirs: 'უცნობის GIF‑ებს ველოდებით',
+    you: 'თქვენ',
     next: 'შემდეგი',
     next_stranger: 'შემდეგი უცნობი',
     stranger: 'უცნობი',

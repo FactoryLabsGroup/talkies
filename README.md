@@ -2,7 +2,7 @@
 
 Meet a stranger. Earn your words. Live at **https://factorylabs.app/talkies/**
 
-Two random strangers start with GIFs only. After a minute they can switch to text, but only if both agree. [DESIGN.md](DESIGN.md) holds the earlier, longer concept.
+Two random strangers start with GIFs only. Once a minute has passed and each has sent at least 3 GIFs, they can switch to text, but only if both agree. [DESIGN.md](DESIGN.md) holds the earlier, longer concept.
 
 ## How it works
 
