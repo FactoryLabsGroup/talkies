@@ -4,104 +4,130 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Talkies</title>
-  <meta name="description" content="Meet a stranger. Earn your words. Every chat starts as a silent film.">
-  <meta name="theme-color" content="#F6F4F0" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Meet a stranger. Earn your words. Start with emoji, unlock phrases, GIFs and free chat by taking turns.">
+  <meta name="theme-color" content="#FAFAFB" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B0B0F" media="(prefers-color-scheme: dark)">
   <meta property="og:title" content="Talkies">
   <meta property="og:description" content="Meet a stranger. Earn your words.">
   <meta property="og:url" content="https://factorylabs.app/talkies/">
   <meta property="og:type" content="website">
-  <link rel="icon" href="favicon.svg?v=3" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg?v=4" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=Noto+Sans+Georgian:wght@400;500;600&family=Noto+Serif+Georgian:wght@400;500&display=swap">
-  <link rel="stylesheet" href="style.css?v=3">
-  <script type="module" src="app.js?v=3"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="style.css?v=4">
+  <script type="module" src="app.js?v=4"></script>
 </head>
 <body data-screen="landing">
+<div class="glow" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="brand" href="./" aria-label="Talkies">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs><linearGradient id="mk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B7CFF"/><stop offset="1" stop-color="#5B4BEA"/></linearGradient></defs>
+      <path d="M8 4h16a5 5 0 0 1 5 5v11a5 5 0 0 1-5 5h-8.5L10 29.5V25H8a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z" fill="url(#mk)"/>
+      <g fill="#fff"><circle cx="11" cy="14.5" r="1.7"/><circle cx="16" cy="14.5" r="1.7"/><circle cx="21" cy="14.5" r="1.7"/></g>
+    </svg>
+    <span>Talkies</span>
+  </a>
+  <div class="nav-right">
+    <span class="online"></span>
+    <button id="langBtn" class="lang" type="button"></button>
+  </div>
+</header>
+
 <main id="app">
 
   <!-- Landing -->
   <section id="landing" class="screen">
-    <div class="topline">
-      <span class="brandmark">
-        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M6 5h20a3 3 0 0 1 3 3v13a3 3 0 0 1-3 3H15l-6 4.5V24H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z" fill="var(--ink)"/>
-          <g fill="var(--bg)"><rect x="6.5" y="7.5" width="2.4" height="1.8" rx=".5"/><rect x="11.5" y="7.5" width="2.4" height="1.8" rx=".5"/><rect x="16.5" y="7.5" width="2.4" height="1.8" rx=".5"/><rect x="21.5" y="7.5" width="2.4" height="1.8" rx=".5"/>
-          <rect x="6.5" y="19.7" width="2.4" height="1.8" rx=".5"/><rect x="11.5" y="19.7" width="2.4" height="1.8" rx=".5"/><rect x="16.5" y="19.7" width="2.4" height="1.8" rx=".5"/><rect x="21.5" y="19.7" width="2.4" height="1.8" rx=".5"/></g>
-          <g fill="var(--accent)"><circle cx="11" cy="14.5" r="1.6"/><circle cx="16" cy="14.5" r="1.6"/><circle cx="21" cy="14.5" r="1.6"/></g>
-        </svg>
-      </span>
-      <button id="langBtn" class="lang" type="button"></button>
-    </div>
     <div class="hero">
-      <p class="eyebrow">factorylabs</p>
-      <h1 class="wordmark">Talkies</h1>
-      <p class="tagline" data-i="tagline"></p>
-      <p class="sub" data-i="sub"></p>
+      <p class="pill"><span class="pill-dot"></span><span data-i="pill"></span></p>
+      <h1 class="headline" data-i="tagline"></h1>
+      <p class="lead" data-i="lead"></p>
+      <div class="cta-row">
+        <button id="findBtn" class="btn primary lg" type="button"><span data-i="find"></span><span class="ico" data-icon="arrow"></span></button>
+      </div>
+      <p class="fine" data-i="footer"></p>
     </div>
-    <div class="cta">
-      <button id="findBtn" class="btn primary big" type="button" data-i="find"></button>
-      <p class="online"></p>
+    <div class="how">
+      <p class="how-title" data-i="how_title"></p>
+      <ol id="steps" class="steps"></ol>
     </div>
-    <p class="foot" data-i="footer"></p>
   </section>
 
   <!-- Searching -->
   <section id="search" class="screen" hidden>
-    <div class="searching">
-      <div class="pulse"><span id="searchEmoji">😶</span></div>
-      <p class="search-title" data-i="searching"></p>
+    <div class="center-card">
+      <div class="radar"><span id="searchEmoji">😶</span></div>
+      <h2 class="h2" data-i="searching"></h2>
       <p class="online"></p>
       <div id="quiet" hidden>
         <p class="muted" data-i="quiet"></p>
-        <button id="inviteBtn" class="btn ghost" type="button" data-i="invite"></button>
+        <button id="inviteBtn" class="btn secondary" type="button" data-i="invite"></button>
       </div>
+      <button id="cancelBtn" class="btn ghost" type="button" data-i="cancel"></button>
     </div>
-    <button id="cancelBtn" class="link" type="button" data-i="cancel"></button>
   </section>
 
   <!-- Match -->
   <section id="match" class="screen" hidden>
-    <header class="top">
-      <div class="chip">
-        <span id="ava" class="ava"></span>
-        <span id="them" class="them"></span>
+    <div class="frame">
+      <aside class="side">
+        <div class="side-block stranger">
+          <span class="ava lg"></span>
+          <div class="stranger-info">
+            <p class="label" data-i="stranger"></p>
+            <p class="them-info"></p>
+          </div>
+        </div>
+        <div class="side-block">
+          <div class="row-between"><p class="label" data-i="time_left"></p><p id="fuseSecs" class="fuse-secs"></p></div>
+          <div class="fuse"><div class="fuse-fill"></div></div>
+        </div>
+        <ol id="ladder" class="ladder"></ol>
+        <button class="btn secondary block next-btn" type="button"><span data-i="next_stranger"></span><span class="ico" data-icon="skip"></span></button>
+      </aside>
+
+      <div class="chat">
+        <div class="chat-head">
+          <div class="mobile-top">
+            <div class="chip"><span class="ava"></span><span class="them-info"></span></div>
+            <button class="btn secondary sm next-btn" type="button"><span data-i="next"></span><span class="ico" data-icon="skip"></span></button>
+          </div>
+          <div class="fuse mobile-only"><div class="fuse-fill"></div></div>
+          <div class="stage-head">
+            <div>
+              <p id="stageTitle" class="stage-title"></p>
+              <p id="meterText" class="hint"></p>
+            </div>
+            <div id="ladderMini" class="ladder-mini"></div>
+          </div>
+        </div>
+        <div id="feed" class="feed" aria-live="polite"></div>
+        <div class="composer">
+          <div id="consent" class="consent" hidden></div>
+          <div id="tray" class="tray">
+            <div id="tokens" class="tokens"></div>
+            <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" hidden>
+            <button id="sendBtn" class="send" type="button" disabled aria-label="Send"><span class="ico" data-icon="send"></span></button>
+          </div>
+          <nav id="tabs" class="tabs"></nav>
+          <div id="panel" class="panel"></div>
+        </div>
       </div>
-      <button id="nextBtn" class="next" type="button"><span data-i="next"></span><span aria-hidden="true">→</span></button>
-    </header>
-    <div id="fuse" class="fuse" role="progressbar" aria-valuemin="0" aria-valuemax="90">
-      <div id="fuseFill" class="fuse-fill"></div>
-      <span id="fuseSpark" class="fuse-spark"></span>
-    </div>
-    <div class="progress">
-      <div class="progress-labels"><span id="stageName" class="stage-name"></span><span id="stageNext" class="stage-next"></span></div>
-      <div id="ladder" class="ladder"></div>
-    </div>
-    <div id="feed" class="feed" aria-live="polite"></div>
-    <div class="dock">
-      <p id="meterText" class="hint"></p>
-      <div id="consent" class="consent" hidden></div>
-      <div id="tray" class="tray">
-        <div id="tokens" class="tokens"></div>
-        <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" hidden>
-        <button id="sendBtn" class="send" type="button" disabled aria-label="Send">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
-      <nav id="tabs" class="tabs"></nav>
-      <div id="panel" class="panel"></div>
     </div>
     <div id="overlay" class="overlay" hidden></div>
-    <div id="connecting" class="connecting"><div class="pulse small"><span>👋</span></div><p data-i="connecting"></p></div>
+    <div id="connecting" class="connecting"><div class="radar small"><span>👋</span></div><p data-i="connecting"></p></div>
   </section>
 
-  <!-- Postcard -->
+  <!-- End -->
   <section id="end" class="screen" hidden>
-    <div id="postcard" class="postcard"></div>
-    <div class="end-actions">
-      <button id="againBtn" class="btn primary big" type="button" data-i="next_stranger"></button>
-      <button id="shareBtn" class="btn ghost" type="button" data-i="share"></button>
+    <div class="end-wrap">
+      <div id="postcard" class="postcard"></div>
+      <div class="end-actions">
+        <button id="againBtn" class="btn primary lg" type="button"><span data-i="next_stranger"></span><span class="ico" data-icon="arrow"></span></button>
+        <button id="shareBtn" class="btn secondary lg" type="button" data-i="share"></button>
+      </div>
     </div>
   </section>
 

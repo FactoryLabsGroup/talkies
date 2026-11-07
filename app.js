@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=3'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=3'
-import { Net } from './net.js?v=3'
+import { CONFIG } from './config.js?v=4'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=4'
+import { Net } from './net.js?v=4'
 
 // ---------------------------------------------------------------- content
 
@@ -40,6 +40,31 @@ const TZ_CC = Object.fromEntries(('Asia/Tbilisi GE,Europe/London GB,Europe/Dubli
   'Pacific/Honolulu US,America/Toronto CA,America/Vancouver CA,America/Mexico_City MX,America/Sao_Paulo BR,' +
   'America/Argentina/Buenos_Aires AR,America/Bogota CO,America/Lima PE,America/Santiago CL,Africa/Cairo EG,' +
   'Africa/Lagos NG,Africa/Johannesburg ZA,Africa/Nairobi KE,Africa/Casablanca MA').split(',').map(s => s.split(' ')))
+
+// ---------------------------------------------------------------- icons (line icons, 24px grid)
+
+const SVG = (p, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`
+const ICONS = {
+  arrow: SVG('<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>'),
+  send: SVG('<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>', 2.2),
+  skip: SVG('<path d="m6 5 9 7-9 7z"/><path d="M18 5v14"/>'),
+  lock: SVG('<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>'),
+  check: SVG('<path d="M20 6 9 17l-5-5"/>', 2.5),
+  s1: SVG('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.3 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/><path d="M9 9.5h.01M15 9.5h.01"/>'),
+  s2: SVG('<path d="M4 7V5h16v2"/><path d="M12 5v14"/><path d="M9 19h6"/>'),
+  s3: SVG('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4M3 12h18"/>'),
+  s4: SVG('<path d="M21 12a8 8 0 0 1-11.7 7.1L3 21l1.9-6.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>'),
+  s5: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M18.5 10.5v.5a6.5 6.5 0 0 1-13 0v-.5"/><path d="M12 17.5V21"/>'),
+}
+function icon(name, cls = 'ico') {
+  const s = document.createElement('span')
+  s.className = cls
+  s.innerHTML = ICONS[name] || ''
+  return s
+}
+function hydrateIcons() {
+  document.querySelectorAll('[data-icon]').forEach(el => { if (!el.firstElementChild) el.innerHTML = ICONS[el.dataset.icon] || '' })
+}
 
 // ---------------------------------------------------------------- helpers
 
@@ -84,7 +109,12 @@ function applyLang() {
   document.documentElement.lang = lang
   document.querySelectorAll('[data-i]').forEach(el => (el.textContent = t(el.dataset.i)))
   $('#langBtn').textContent = lang === 'ka' ? 'English' : 'ქართული'
+  $('#steps').replaceChildren(...[1, 2, 3, 4, 5].map(i => h('li', { class: 'step' },
+    h('div', { class: 'step-top' }, h('span', { class: 'step-ico' }, icon('s' + i)), h('span', { class: 'step-num' }, String(i).padStart(2, '0'))),
+    h('p', { class: 'step-name' }, t('s' + i)),
+    h('p', { class: 'step-desc' }, t('d' + i)))))
   renderCount()
+  if (G && !G.ended) { renderAll(); renderThem() }
 }
 $('#langBtn').addEventListener('click', () => {
   lang = lang === 'ka' ? 'en' : 'ka'
@@ -193,9 +223,8 @@ function startMatch(partner, isHost) {
   } : null
 
   $('#feed').replaceChildren()
-  $('#ava').textContent = G.ava
-  $('#ava').style.setProperty('--hue', G.hue)
-  $('#them').textContent = ''
+  document.querySelectorAll('#match .ava').forEach(el => el.style.setProperty('--hue', G.hue))
+  document.querySelectorAll('#match .them-info').forEach(el => (el.textContent = ''))
   $('#connecting').hidden = false
   show('match')
   renderAll()
@@ -238,14 +267,14 @@ function endMatch(why) {
   vibrate(30)
 }
 
-$('#nextBtn').addEventListener('click', () => {
+document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', () => {
   if (!G || G.ended) return
   net.send({ t: 'bye' })
   clearMatchTimers()
   G.ended = true
   net.endMatch()
   startSearch()
-})
+}))
 addEventListener('pagehide', () => { if (G && !G.ended) net.send({ t: 'bye' }) })
 
 // ---------------------------------------------------------------- incoming
@@ -430,23 +459,30 @@ function renderThem() {
     const hr = +new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: tz || undefined }).format(d)
     sky = hr >= 5 && hr < 8 ? '🌅' : hr >= 8 && hr < 17 ? '☀️' : hr >= 17 && hr < 20 ? '🌇' : '🌙'
   } catch {}
-  $('#them').replaceChildren(...[
+  document.querySelectorAll('#match .them-info').forEach(el => el.replaceChildren(...[
     h('span', { class: 'flag' }, flagOf(cc) || '🌍'),
     h('span', {}, LANG_NAME[l]),
+    time && h('span', { class: 'sep' }, '·'),
     time && h('span', { class: 'time' }, `${sky} ${time}`),
-  ].filter(Boolean))
+  ].filter(Boolean)))
 }
 
 // One progress bar for the whole ladder: finished stages are full, the current stage fills
 // with spark as you take turns, later stages are empty.
 function renderLadder() {
   const v = G.view
+  const frac = i => (i < v.stage || v.stage >= 5 ? 1 : i === v.stage ? Math.min(1, v.spark / (v.need || 1)) : 0)
   $('#ladder').replaceChildren(...[1, 2, 3, 4, 5].map(i => {
-    const fill = i < v.stage || v.stage >= 5 ? 1 : i === v.stage ? Math.min(1, v.spark / (v.need || 1)) : 0
-    return h('span', { class: 'seg', title: t('s' + i), style: `--c: var(--s${i}); --f: ${fill}` })
+    const state = i < v.stage ? 'done' : i === v.stage ? 'now' : 'locked'
+    return h('li', { class: `step-row ${state}` },
+      h('span', { class: 'dot' }, icon(state === 'done' ? 'check' : state === 'locked' ? 'lock' : 's' + i)),
+      h('div', {},
+        h('p', { class: 'name' }, t('s' + i)),
+        h('p', { class: 'desc' }, t('d' + i)),
+        state === 'now' && i < 5 && h('div', { class: 'mini-bar' }, h('i', { style: `transform: scaleX(${frac(i)})` }))))
   }))
-  $('#stageName').textContent = `${STAGE_ICON[v.stage]} ${t('s' + v.stage)}`
-  $('#stageNext').textContent = v.stage < 5 ? `${t('next_unlock')} ${STAGE_ICON[v.stage + 1]} ${t('s' + (v.stage + 1))}` : t('d5')
+  $('#ladderMini').replaceChildren(...[1, 2, 3, 4, 5].map(i => h('i', { style: `--f: ${frac(i)}` })))
+  $('#stageTitle').replaceChildren(icon('s' + v.stage), h('span', {}, t('s' + v.stage)), h('span', { class: 'of' }, t('stage_of', { n: v.stage })))
 }
 
 function renderMeter() {
@@ -475,11 +511,14 @@ function drawFuse() {
   if (!G || G.ended) return
   const left = G.them ? Math.max(0, G.fuseEnd - now()) : G.view.fuseMax
   const pct = Math.min(1, left / G.view.fuseMax)
-  const fill = $('#fuseFill')
-  fill.style.transform = `scaleX(${pct})`
-  $('#fuseSpark').style.left = `${pct * 100}%`
-  $('#fuse').classList.toggle('low', left < 10000)
-  $('#fuse').setAttribute('aria-valuenow', Math.round(left / 1000))
+  const low = G.them && left < 10000
+  document.querySelectorAll('#match .fuse').forEach(f => {
+    f.firstElementChild.style.transform = `scaleX(${pct})`
+    f.classList.toggle('low', low)
+  })
+  const secs = $('#fuseSecs')
+  secs.textContent = mmss(left)
+  secs.classList.toggle('low', low)
   G.raf = requestAnimationFrame(drawFuse)
 }
 
@@ -494,7 +533,7 @@ function cleanTokens(tk, stage) {
     if (!x || typeof x.v !== 'string') return null
     if (x.k === 'e' && EMOJI_SET.has(x.v)) out.push({ k: 'e', v: x.v })
     else if (x.k === 'p' && stage >= 2 && PHRASE_MAP[x.v]) out.push({ k: 'p', v: x.v })
-    else if (x.k === 'g' && stage >= 3 && GIF_OK.test(x.v) && x.v.length < 300 && ++gifs <= 1) out.push({ k: 'g', v: x.v, e: typeof x.e === 'string' ? x.e.slice(0, 8) : '' })
+    else if (x.k === 'g' && stage >= 3 && GIF_OK.test(x.v) && x.v.length < 300 && ++gifs <= 1) out.push({ k: 'g', v: x.v, e: typeof x.e === 'string' ? x.e.slice(0, 8) : '', w: dim(x.w), h: dim(x.h) })
     else if (x.k === 'w' && stage >= 4 && ++texts <= 1) {
       const v = x.v.trim()
       if (!v || (stage === 4 ? !validWhisper(v) : v.length > 200)) return null
@@ -505,6 +544,7 @@ function cleanTokens(tk, stage) {
 }
 // Whisper: up to 3 words. Anything goes except numbers and links, so nobody can swap
 // phone numbers or handles before both players agree to talk freely.
+const dim = n => (Number.isFinite(+n) && +n > 0 ? Math.min(2000, Math.round(+n)) : 0)
 function validWhisper(s) {
   return s.length <= 30 && s.split(/\s+/).filter(Boolean).length <= 3 &&
     !/[0-9０-９@#/\\]|https?:|www\.|\.(com|net|org|io|me|app|ge|ru|co|gg|ly|tv|xyz)\b/i.test(s)
@@ -537,7 +577,7 @@ function sendMessage() {
   if (!G || G.ended || !G.them) return
   if (now() - G.lastSend < 600) return
   const input = $('#textIn')
-  const raw = [...G.tokens.map(({ k, v, e }) => (k === 'g' ? { k, v, e } : { k, v }))]
+  const raw = [...G.tokens.map(({ k, v, e, w, h }) => (k === 'g' ? { k, v, e, w, h } : { k, v }))]
   const text = G.view.stage >= 4 ? input.value.trim() : ''
   if (text) raw.push({ k: 'w', v: text })
   if (!raw.length) return
@@ -558,6 +598,10 @@ function sendMessage() {
   if (H) score('me')
 }
 $('#sendBtn').addEventListener('click', sendMessage)
+addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || document.body.dataset.screen !== 'match' || e.target.closest?.('.gif-search, #textIn')) return
+  if (G?.tokens.length) { e.preventDefault(); sendMessage() }
+})
 $('#textIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendMessage() } })
 $('#textIn').addEventListener('input', () => { $('#sendBtn').disabled = !G.tokens.length && !$('#textIn').value.trim() })
 
@@ -583,7 +627,7 @@ function renderTabs() {
         renderTabs()
         renderPanel()
       },
-    }, t(tab.label))
+    }, icon(open ? 's' + tab.stage : 'lock'), h('span', {}, t(tab.label)))
   }))
 }
 
@@ -604,7 +648,7 @@ let gifQuery = '', gifTimer = null
 function renderGifPanel(panel) {
   if (!CONFIG.GIPHY_API_KEY) {
     panel.replaceChildren(h('div', { class: 'grid emoji-grid' },
-      Object.entries(NOTO).map(([e, code]) => h('button', { class: 'key gif-key', onclick: () => addToken({ k: 'g', v: notoUrl(code), e }) }, e))))
+      Object.entries(NOTO).map(([e, code]) => h('button', { class: 'key gif-key', onclick: () => addToken({ k: 'g', v: notoUrl(code), e, w: 512, h: 512 }) }, e))))
     return
   }
   const grid = h('div', { class: 'gif-grid' })
@@ -623,10 +667,10 @@ async function loadGifs(grid) {
     const res = await fetch(`${base}${gifQuery ? 'search' : 'trending'}?${q}`)
     const { data } = await res.json()
     grid.replaceChildren(...data.map(g => {
-      const im = g.images.fixed_height_small
-      const url = im.webp || im.url
-      return h('button', { class: 'gif', onclick: () => addToken({ k: 'g', v: url, thumb: url }) },
-        h('img', { src: url, alt: g.title || '', loading: 'lazy', referrerpolicy: 'no-referrer' }))
+      const sm = g.images.fixed_height_small, big = g.images.fixed_height || sm
+      const thumb = sm.webp || sm.url, url = big.webp || big.url
+      return h('button', { class: 'gif', onclick: () => addToken({ k: 'g', v: url, thumb, w: +big.width, h: +big.height }) },
+        h('img', { src: thumb, alt: g.title || '', loading: 'lazy', referrerpolicy: 'no-referrer' }))
     }))
   } catch {
     grid.replaceChildren(h('p', { class: 'muted' }, '🎞️ …'))
@@ -637,19 +681,22 @@ async function loadGifs(grid) {
 
 function addBubble(who, id, tk) {
   const onlyEmoji = tk.every(x => x.k === 'e')
-  const bubble = h('div', { class: `bubble${onlyEmoji ? ' big' : ''}`, 'data-id': id })
+  const onlyGif = tk.length === 1 && tk[0].k === 'g'
+  const bubble = h('div', { class: `bubble${onlyEmoji ? ' big' : ''}${onlyGif ? ' has-gif' : ''}`, 'data-id': id })
   for (const x of tk) {
     if (x.k === 'e') { bubble.append(h('span', { class: 'e' }, x.v)); G.story.push(x.v) }
     else if (x.k === 'p') {
       const translated = who === 'them' && G.them?.lang !== lang
       bubble.append(h('span', { class: 'card' }, PHRASE_MAP[x.v][lang], translated && h('sup', { title: t('translated') }, '🌐')))
     } else if (x.k === 'g') {
+      const gw = x.w || 160, gh = x.h || 160, k = Math.min(1, 220 / Math.max(gw, gh))
       bubble.append(h('img', { class: 'gif-msg', src: x.v, alt: x.e || 'GIF', referrerpolicy: 'no-referrer',
+        width: Math.round(gw * k), height: Math.round(gh * k),
         onload: () => { const f = $('#feed'); f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' }) } }))
       G.story.push(x.e || '🎞️')
     } else if (x.k === 'w') bubble.append(h('span', { class: 'w' }, hideLinks(x.v)))
   }
-  const row = h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'mini-ava', style: `--hue:${G.hue}` }, G.ava), bubble)
+  const row = h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: `--hue:${G.hue}` }), bubble)
   if (who === 'them') {
     bubble.tabIndex = 0
     bubble.setAttribute('role', 'button')
@@ -722,7 +769,7 @@ function revealJinx(res) {
   card.querySelector('.jinx-opts').replaceChildren(
     h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('you')), h('span', { class: 'jinx-pick' }, mine)),
     h('div', { class: 'jinx-vs' }, res.hit ? '=' : '≠'),
-    h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, G.ava), h('span', { class: 'jinx-pick' }, theirs)))
+    h('div', { class: 'jinx-side' }, h('span', { class: 'jinx-who' }, t('stranger')), h('span', { class: 'jinx-pick' }, theirs)))
   card.querySelector('.jinx-status').textContent = res.hit ? t('jinx_hit') : t('jinx_miss')
   if (res.hit) { confetti(); vibrate([20, 40, 20]) }
   if (typeof mine === 'string') G.story.push(mine)
@@ -741,7 +788,7 @@ function levelUpFx(stage) {
   const o = $('#overlay')
   o.style.setProperty('--c', `var(--s${stage})`)
   o.replaceChildren(h('div', { class: 'lv-card' },
-    h('div', { class: 'lv-ico' }, STAGE_ICON[stage]),
+    h('div', { class: 'lv-ico' }, icon('s' + stage)),
     h('p', { class: 'lv-kicker' }, t('unlocked')),
     h('p', { class: 'lv-name' }, t('s' + stage)),
     h('p', { class: 'lv-desc' }, t('d' + stage))))
@@ -788,20 +835,21 @@ function renderPostcard(why) {
   const dur = now() - (G.connectedAt || G.startedAt)
   const story = G.story.slice(-48)
   const flag = flagOf(G.them?.cc) || '🌍'
-  $('#postcard').replaceChildren(
-    h('p', { class: 'pc-end' }, t('the_end')),
-    h('p', { class: 'pc-why' }, t('end_' + why), ' ', why === 'fizzle' ? '💨' : '👋'),
+  $('#postcard').replaceChildren(...[
+    h('p', { class: 'pc-kicker' }, t('the_end')),
+    h('p', { class: 'pc-end' }, t('end_' + why)),
     h('div', { class: 'pc-pair' },
-      h('span', { class: 'pc-ava you' }, '🙂'),
+      h('span', { class: 'ava you' }),
       h('span', { class: 'pc-amp' }, '+'),
-      h('span', { class: 'pc-ava', style: `--hue:${G.hue}` }, G.ava),
+      h('span', { class: 'ava', style: `--hue:${G.hue}` }),
       h('span', { class: 'pc-flag' }, flag)),
-    h('div', { class: 'pc-stage', style: `--c: var(--s${G.maxStage})` },
-      h('span', { class: 'pc-kicker' }, t('reached')),
-      h('span', { class: 'pc-stage-name' }, `${STAGE_ICON[G.maxStage]} ${t('s' + G.maxStage)}`)),
+    h('div', { class: 'pc-stage' },
+      h('span', { class: 'lv-ico' }, icon('s' + G.maxStage)),
+      h('div', {}, h('p', { class: 'pc-kicker' }, t('reached')), h('p', { class: 'pc-stage-name' }, t('s' + G.maxStage)))),
     h('div', { class: 'pc-stats' },
       stat(mmss(dur), t('stat_time')), stat(v.volleys, t('stat_volleys')), stat(v.jinxes, t('stat_jinx'))),
-    story.length > 0 ? h('div', { class: 'pc-story' }, h('p', { class: 'pc-kicker' }, t('story')), h('p', { class: 'pc-strip' }, story.join(''))) : '')
+    story.length > 0 && h('div', { class: 'pc-story' }, h('p', { class: 'pc-kicker' }, t('story')), h('p', { class: 'pc-strip' }, story.join(''))),
+  ].filter(Boolean))
   $('#shareBtn').onclick = () =>
     share(t('share_text', { brand: CONFIG.BRAND, stage: `${STAGE_ICON[G.maxStage]} ${t('s' + G.maxStage)}`, emoji: story.slice(0, 12).join('') }), $('#shareBtn'))
 }
@@ -809,5 +857,6 @@ const stat = (n, label) => h('div', { class: 'stat' }, h('b', {}, String(n)), h(
 
 // ---------------------------------------------------------------- boot
 
+hydrateIcons()
 applyLang()
 show('landing')

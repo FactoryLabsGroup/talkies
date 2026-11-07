@@ -8,6 +8,10 @@ export const STR = {
   en: {
     tagline: 'Meet a stranger. Earn your words.',          // landing, under the logo
     sub: 'Every chat starts as a silent film.',            // landing, small line
+    pill: 'A social experiment by Factory Labs',           // landing, badge above the headline
+    lead: 'Start with emoji only. Take turns to unlock phrases, GIFs, a few words and finally free chat. No sign-up.', // landing, under the headline
+    how_title: 'How it works',                             // landing, above the 5 stage cards
+    stage_of: 'Stage {n} of 5',                            // match header, {n} = current stage
     find: 'Find a stranger',                               // landing, main button
     online_one: '1 person here now',                       // landing + search, {n} = 1
     online_other: '{n} people here now',                   // landing + search, {n} = count
@@ -58,6 +62,10 @@ export const STR = {
   ka: {
     tagline: 'გაიცანით უცნობი. დაიმსახურეთ სიტყვები.',
     sub: 'ყველა საუბარი მუნჯი კინოთი იწყება.',
+    pill: 'სოციალური ექსპერიმენტი Factory Labs-ისგან',
+    lead: 'დაიწყეთ მხოლოდ ემოჯით. მონაცვლეობით გახსენით ფრაზები, GIF‑ები, რამდენიმე სიტყვა და ბოლოს თავისუფალი მიმოწერა. რეგისტრაციის გარეშე.',
+    how_title: 'როგორ მუშაობს',
+    stage_of: 'ეტაპი {n} / 5',
     find: 'უცნობის პოვნა',
     online_one: 'ახლა აქ 1 ადამიანია',
     online_other: 'ახლა აქ {n} ადამიანია',
@@ -77,7 +85,7 @@ export const STR = {
     jinx_wait: 'უცნობს ველოდებით…',
     hint: 'მონაცვლეობით გაგზავნეთ და შემდეგი გაიხსნება',
     s1: 'მუნჯი', s2: 'ტიტრები', s3: 'კადრები', s4: 'ჩურჩული', s5: 'ხმოვანი',
-    d1: 'მხოლოდ ემოჯი', d2: 'სიტყვები და ფრაზები', d3: 'GIF-ები', d4: 'ტექსტი, მაქსიმუმ 3 სიტყვა', d5: 'თქვით, რაც გინდათ',
+    d1: 'მხოლოდ ემოჯი', d2: 'სიტყვები და ფრაზები', d3: 'GIF‑ები', d4: 'ტექსტი, მაქსიმუმ 3 სიტყვა', d5: 'თქვით, რაც გინდათ',
     unlocked: 'გაიხსნა',
     next_unlock: 'შემდეგი:',
     consent_ask: 'ხმოვან რეჟიმზე გადავიდეთ? საჭიროა ორივეს თანხმობა',
@@ -87,9 +95,9 @@ export const STR = {
     whisper_ph: 'მაქსიმუმ 3 სიტყვა…',
     free_ph: 'დაწერეთ რამე…',
     whisper_err: 'მაქსიმუმ 3 სიტყვა, ციფრებისა და ბმულების გარეშე',
-    gif_search: 'GIF-ების ძიება',
+    gif_search: 'GIF‑ების ძიება',
     tray_hint: 'შეტყობინება ქვემოთ ააწყვეთ',
-    tab_emoji: 'ემოჯი', tab_phrases: 'ფრაზები', tab_gif: 'GIF-ები', tab_text: 'ტექსტი',
+    tab_emoji: 'ემოჯი', tab_phrases: 'ფრაზები', tab_gif: 'GIF‑ები', tab_text: 'ტექსტი',
     locked: 'დაკეტილია',
     send: 'გაგზავნა', clear: 'გასუფთავება', you: 'თქვენ', time_left: 'დარჩენილი დრო', react: 'რეაქცია', translated: 'ნათარგმნია',
     the_end: 'დასასრული',
