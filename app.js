@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=9'
-import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP } from './i18n.js?v=9'
-import { Net } from './net.js?v=9'
+import { CONFIG } from './config.js?v=10'
+import { STR, LANGS, LANG_NAME, PHRASES, PHRASE_MAP, SCALES } from './i18n.js?v=10'
+import { Net } from './net.js?v=10'
 
 // ---------------------------------------------------------------- content
 
@@ -17,6 +17,12 @@ const JINXW = [[['Sea', 'ზღვა'], ['Mountains', 'მთა']], [['Day', '
   [['Travel', 'მოგზაურობა'], ['Home', 'სახლი']], [['Past', 'წარსული'], ['Future', 'მომავალი']]]
 const JINX = JINXW.map((p, i) => p.map((_, j) => `${i}-${j}`))
 const jw = id => { const [i, j] = String(id).split('-').map(Number); return JINXW[i]?.[j]?.[lang === 'ka' ? 1 : 0] ?? '' }
+// Scale rounds (see SCALES in i18n.js). Positions on the line are 0–100.
+const SCALE_MS = 40000
+const L = pair => pair[lang === 'ka' ? 1 : 0]
+const quote = s => (lang === 'ka' ? `„${s}“` : `“${s}”`)
+const pct = n => (Number.isFinite(+n) ? Math.max(0, Math.min(100, Math.round(+n))) : null)
+const clueText = (sc, c) => (c?.i != null ? L(SCALES[sc].words[c.i]) : c?.v ?? '')
 // Animated Noto emoji (Google) — the GIF fallback when there's no GIPHY key.
 const NOTO = { '😂':'1f602','🤣':'1f923','😍':'1f60d','🥰':'1f970','😭':'1f62d','😱':'1f631','🤯':'1f92f',
   '🥳':'1f973','😎':'1f60e','🤔':'1f914','🙄':'1f644','😴':'1f634','💀':'1f480','👻':'1f47b','🔥':'1f525',
@@ -120,7 +126,7 @@ function applyLang() {
   $('#langBtn').textContent = lang === 'ka' ? 'English' : 'ქართული'
   renderCount()
   startDemo()
-  if (G && !G.ended) { renderAll(); renderThem() }
+  if (G && !G.ended) { renderAll(); renderThem(); updateScale() }
 }
 $('#langBtn').addEventListener('click', () => {
   lang = lang === 'ka' ? 'en' : 'ka'
@@ -326,12 +332,12 @@ function startMatch(partner, isHost) {
     ava: pick(AVATARS), hue: Math.floor(Math.random() * 360),
     view: { stage: 1, spark: 0, need: NEED[1], fuse: FUSE_START, fuseMax: fuseCap(1), ac: false, cons: [false, false], volleys: 0, jinxes: 0 },
     fuseEnd: now() + FUSE_START, startedAt: now(), maxStage: 1, story: [], tokens: [], tab: 'emoji',
-    lastSend: 0, timers: [], jinx: null,
+    lastSend: 0, timers: [], jinx: null, scale: null,
   }
   H = isHost ? {
     stage: 1, spark: 0, fuse: FUSE_START, fuseMax: fuseCap(1), ac: false, cons: [false, false],
     volleys: 0, jinxes: 0, lastSender: null, lastActivity: now(), lastJinxAt: 0, opened: false,
-    jinx: null, last: now(), lastPush: 0,
+    jinx: null, scale: null, giver: null, flip: false, last: now(), lastPush: 0,
   } : null
 
   $('#feed').replaceChildren()
@@ -437,6 +443,12 @@ function onGame(m) {
     case 'jp': if (H) hostJinxPick('them', String(m.id), String(m.pick)); break
     case 'jr': if (!H) revealJinx(m); break
     case 'jx': removeJinx(String(m.id)); break
+    case 'sc': if (!H) { const r = cleanScale(m); if (r) showScale(r) } break
+    case 'scc': onClue(m); break
+    case 'scm': onGhost(m); break
+    case 'scg': onGuess(m); break
+    case 'scr': if (!H) revealScale(m); break
+    case 'scx': removeScale(String(m.id)); break
     case 'ok': if (H) hostConsent(1); break
     case 'end': endMatch(m.why === 'fizzle' ? 'fizzle' : 'left'); break
     case 'bye': endMatch('left'); break
@@ -460,9 +472,16 @@ function hostTick() {
     H.jinx = null
     H.lastJinxAt = tNow
   }
-  if (!H.jinx) {
-    if (!H.opened && tNow - G.connectedAt > 1200) { H.opened = true; spawnJinx() }
-    else if (H.opened && tNow - H.lastActivity > 10000 && tNow - H.lastJinxAt > 12000) spawnJinx()
+  if (H.scale && tNow - H.scale.t > SCALE_MS) {
+    net.send({ t: 'scx', id: H.scale.id })
+    removeScale(H.scale.id)
+    H.scale = null
+    H.lastJinxAt = tNow
+  }
+  if (!H.jinx && !H.scale) {
+    // Every match opens with a scale round; later, quiet moments alternate jinx and scale.
+    if (!H.opened && tNow - G.connectedAt > 1200) { H.opened = true; spawnScale() }
+    else if (H.opened && tNow - H.lastActivity > 10000 && tNow - H.lastJinxAt > 12000) (H.flip = !H.flip) ? spawnJinx() : spawnScale()
   }
   if (tNow - H.lastPush > 2000) push()
 }
@@ -530,6 +549,44 @@ function hostJinxPick(who, id, choice) {
   revealJinx(res)
   H.jinx = null
   H.lastJinxAt = now()
+  push()
+}
+
+
+// Scale: the host picks the line, the hidden dot and who gives the hint (taking turns), then
+// scores the guess once both the hint and the guess are in.
+function spawnScale() {
+  const id = rid(), sc = Math.floor(Math.random() * SCALES.length)
+  const opts = [...SCALES[sc].words.keys()].sort(() => Math.random() - 0.5).slice(0, 4)
+  const giver = H.giver = H.giver ? (H.giver === 'h' ? 'g' : 'h') : pick(['h', 'g'])
+  const target = 8 + Math.floor(Math.random() * 85)
+  H.scale = { id, sc, opts, giver, target, clue: null, pos: null, t: now() }
+  const m = { t: 'sc', id, sc, opts, giver, target }
+  net.send(m)
+  showScale(m)
+}
+function hostClue(id, clue) {
+  const s = H.scale
+  if (!s || s.id !== id || s.clue) return
+  s.clue = clue
+  H.lastActivity = now()
+  addFuse(5000)
+  push()
+}
+function hostGuess(id, pos) {
+  const s = H.scale
+  if (!s || s.id !== id || !s.clue || s.pos != null) return
+  s.pos = pos
+  const d = Math.abs(pos - s.target)
+  const grade = d <= 8 ? 'bull' : d <= 20 ? 'close' : 'far'
+  if (grade === 'bull') H.jinxes++
+  addFuse(grade === 'bull' ? 10000 : grade === 'close' ? 8000 : 5000)
+  addSpark(grade === 'bull' ? 2 : 1)
+  const res = { t: 'scr', id, pos, target: s.target, grade }
+  net.send(res)
+  revealScale(res)
+  H.scale = null
+  H.lastJinxAt = H.lastActivity = now()
   push()
 }
 
@@ -912,6 +969,178 @@ function removeJinx(id) {
   const card = $(`[data-jinx="${CSS.escape(id)}"]`)
   if (card && !card.classList.contains('done')) card.remove()
   if (G?.jinx?.id === id) G.jinx = null
+}
+
+
+// ---------------------------------------------------------------- scale
+
+function cleanScale(m) {
+  const S = Number.isInteger(m.sc) && SCALES[m.sc]
+  if (!S || !Array.isArray(m.opts) || !['h', 'g'].includes(m.giver)) return null
+  const opts = m.opts.filter(i => Number.isInteger(i) && S.words[i]).slice(0, 4)
+  const target = pct(m.target)
+  if (!opts.length || target == null) return null
+  return { id: String(m.id).slice(0, 12), sc: m.sc, opts, giver: m.giver, target }
+}
+function cleanClue(c, opts) {
+  if (!c || typeof c !== 'object') return null
+  if (Number.isInteger(c.i) && opts.includes(c.i)) return { i: c.i }
+  if (typeof c.v === 'string') { const v = c.v.trim(); if (v && validWords(v, 1)) return { v } }
+  return null
+}
+const scaleCard = id => $(`[data-scale="${CSS.escape(String(id))}"]`)
+
+function showScale({ id, sc, opts, giver, target }) {
+  removeScale(G.scale?.id)
+  const mine = (giver === 'h') === G.host
+  G.scale = { id, sc, opts, mine, target, clue: null, pos: 50, ghost: null, locked: false, done: false, own: false, sentAt: 0 }
+  const S = SCALES[sc]
+  const range = h('input', { class: 'scale-range', type: 'range', min: 0, max: 100, value: 50, 'aria-label': t('scale_title') })
+  range.addEventListener('input', () => moveGuess(id, +range.value))
+  pushFeed(h('div', { class: 'jinx scale', 'data-scale': id },
+    h('p', { class: 'jinx-title' }, `${t('scale_title')} · ${L(S.topic)}`),
+    h('div', { class: 'scale-clue' }),
+    h('div', { class: 'scale-track' },
+      h('div', { class: 'scale-bar' }),
+      h('div', { class: 'scale-rail' },
+        h('span', { class: 'scale-zone' }), h('span', { class: 'scale-bull' }), h('span', { class: 'scale-target' }), h('span', { class: 'scale-guess' })),
+      range),
+    h('div', { class: 'scale-poles' }, h('span', {}, L(S.a)), h('span', {}, L(S.b))),
+    h('div', { class: 'scale-act' }),
+    h('span', { class: 'jinx-timer', style: `animation-duration: ${SCALE_MS}ms` })))
+  updateScale()
+  vibrate(15)
+}
+
+// Redraw the card for the current step. Called on step changes only, never while dragging.
+function updateScale() {
+  const s = G?.scale
+  const card = s && scaleCard(s.id)
+  if (!card) return
+  const S = SCALES[s.sc], hasClue = s.clue != null
+  card.classList.toggle('show-target', s.mine || s.done)
+  card.classList.toggle('thumb', !s.mine && hasClue && !s.done)
+  band(card.querySelector('.scale-zone'), s.target, 20)
+  band(card.querySelector('.scale-bull'), s.target, 8)
+  card.querySelector('.scale-target').style.left = `${s.target}%`
+  const range = card.querySelector('.scale-range')
+  range.disabled = s.mine || !hasClue || s.locked || s.done
+  card.querySelector('.scale-clue').replaceChildren(hasClue
+    ? h('span', { class: 'scale-word' }, quote(clueText(s.sc, s.clue)))
+    : h('span', { class: 'scale-ask' }, s.mine ? t('scale_give') : t('scale_wait_clue')))
+  const status = text => h('p', { class: 'jinx-status' }, text)
+  const act = card.querySelector('.scale-act')
+  if (s.done) act.replaceChildren(h('p', { class: `scale-result ${s.grade}` }, t('scale_' + s.grade)))
+  else if (s.mine && !hasClue) act.replaceChildren(h('div', { class: 'scale-opts' },
+    s.opts.map(i => h('button', { class: 'scale-opt', type: 'button', onclick: () => giveClue(s.id, { i }) }, L(S.words[i]))),
+    s.own ? ownWord(s) : h('button', { class: 'scale-opt own', type: 'button', onclick: () => {
+      s.own = true
+      updateScale()
+      card.querySelector('.scale-own')?.focus()
+    } }, t('scale_own'))))
+  else if (s.mine) act.replaceChildren(status(t('scale_wait_guess')))
+  else if (!hasClue) act.replaceChildren()
+  else if (!s.locked) act.replaceChildren(status(t('scale_guess')),
+    h('button', { class: 'btn primary sm', type: 'button', onclick: () => lockGuess(s.id) }, t('scale_lock')))
+  else act.replaceChildren(status(t('jinx_wait')))
+  placeGuess(card, s.done ? s.pos : s.mine ? s.ghost : null)
+}
+function band(el, c, r) {
+  const lo = Math.max(0, c - r), hi = Math.min(100, c + r)
+  el.style.left = `${lo}%`
+  el.style.width = `${hi - lo}%`
+}
+function placeGuess(card, p) {
+  const g = card.querySelector('.scale-guess')
+  g.hidden = p == null
+  if (p != null) g.style.left = `${p}%`
+}
+function ownWord(s) {
+  const input = h('input', { class: 'scale-own', type: 'text', maxlength: 24, placeholder: t('scale_own_ph'), enterkeyhint: 'send', autocomplete: 'off' })
+  const go = () => {
+    const v = input.value.trim()
+    if (!v) return
+    if (!validWords(v, 1)) { bump(input); return toast(t('scale_word_err')) }
+    giveClue(s.id, { v })
+  }
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go() } })
+  return h('div', { class: 'scale-own-row' }, input, h('button', { class: 'send', type: 'button', 'aria-label': t('send'), onclick: go }, icon('send')))
+}
+
+// The hint giver picked a word.
+function giveClue(id, clue) {
+  const s = G.scale
+  if (!s || s.id !== id || !s.mine || s.clue != null) return
+  s.clue = cleanClue(clue, s.opts)
+  if (!s.clue) return
+  net.send({ t: 'scc', id, clue: s.clue })
+  updateScale()
+  vibrate(10)
+  if (H) hostClue(id, s.clue)
+}
+function onClue(m) {
+  const s = G.scale
+  if (!s || s.id !== String(m.id) || s.mine || s.clue != null) return
+  const clue = cleanClue(m.clue, s.opts)
+  if (!clue) return
+  s.clue = clue
+  updateScale()
+  vibrate(10)
+  if (H) hostClue(s.id, clue)
+}
+
+// The guesser drags: the hint giver watches the marker move live.
+function moveGuess(id, pos) {
+  const s = G.scale
+  if (!s || s.id !== id || s.mine || s.locked || s.clue == null) return
+  s.pos = pos
+  const sendPos = () => { s.sentAt = now(); if (!s.locked) net.send({ t: 'scm', id, pos: s.pos }) }
+  clearTimeout(s.trail)
+  if (now() - s.sentAt > 90) sendPos()
+  else s.trail = setTimeout(sendPos, 100)
+}
+function onGhost(m) {
+  const s = G.scale, pos = pct(m.pos)
+  if (!s || s.id !== String(m.id) || !s.mine || s.done || pos == null) return
+  s.ghost = pos
+  const card = scaleCard(s.id)
+  if (card) placeGuess(card, pos)
+  if (H) H.lastActivity = now()
+}
+
+function lockGuess(id) {
+  const s = G.scale
+  if (!s || s.id !== id || s.mine || s.locked || s.clue == null) return
+  s.locked = true
+  net.send({ t: 'scg', id, pos: s.pos })
+  updateScale()
+  if (H) hostGuess(id, s.pos)
+}
+function onGuess(m) {
+  const s = G.scale, pos = pct(m.pos)
+  if (!s || s.id !== String(m.id) || !s.mine || pos == null) return
+  s.ghost = pos
+  s.locked = true
+  updateScale()
+  if (H) hostGuess(s.id, pos)
+}
+
+function revealScale(res) {
+  const s = G.scale
+  const pos = pct(res.pos), target = pct(res.target)
+  if (!s || s.id !== String(res.id) || pos == null || target == null || !['bull', 'close', 'far'].includes(res.grade)) return
+  Object.assign(s, { pos, target, grade: res.grade, done: true, locked: true })
+  scaleCard(s.id)?.classList.add('done', res.grade === 'bull' ? 'hit' : 'miss')
+  updateScale()
+  G.story.push(clueText(s.sc, s.clue))
+  if (res.grade === 'bull') { confetti(); vibrate([20, 40, 20]) }
+  G.scale = null
+}
+function removeScale(id) {
+  if (!id) return
+  const card = scaleCard(id)
+  if (card && !card.classList.contains('done')) card.remove()
+  if (G?.scale?.id === id) G.scale = null
 }
 
 // ---------------------------------------------------------------- effects

@@ -24,7 +24,7 @@ export const STR = {
     invite_sub: 'Send this private link. You’ll be connected as soon as they open it.', // invite screen
     copy: 'Copy',                                          // invite screen, copy button
     invite_wait: 'Waiting for your friend…',               // invite screen status
-    invite_share_text: 'Join me on Talkies. We start with emoji only.', // share sheet text for a private link
+    invite_share_text: 'Join me on Talkies. We start with one word.', // share sheet text for a private link
     joining: 'Joining your friend…',                       // opened an invite link
     friend_gone: 'Your friend isn’t here right now',       // invite link opened but nobody is waiting
     cancel: 'Cancel',
@@ -66,8 +66,18 @@ export const STR = {
     next_stranger: 'Next stranger',
     share: 'Share',
     copied: 'Copied',
-    share_text: 'We reached {stage} on {brand} without a single word {emoji}', // {brand} = app name, {stage} = stage name, {emoji} = story
+    share_text: 'We reached {stage} on {brand}, one word at a time {emoji}', // {brand} = app name, {stage} = stage name, {emoji} = story
     link_hidden: 'link hidden',
+    scale_title: 'Scale',                                  // scale round card title, before the topic
+    scale_give: 'Only you can see the dot. Pick a word that belongs there', // scale, the player giving the hint
+    scale_own: 'My own word',                              // scale, chip that opens a text field
+    scale_own_ph: 'One word…',                             // scale, own word field placeholder
+    scale_wait_clue: 'The stranger is picking a word…',    // scale, the guessing player waits
+    scale_guess: 'Where is it on the scale? Drag, then tap Here', // scale, the guessing player
+    scale_lock: 'Here',                                    // scale, lock-in button
+    scale_wait_guess: 'The stranger is guessing…',         // scale, the hint giver waits
+    scale_bull: 'Spot on!', scale_close: 'So close!', scale_far: 'You see it differently. Ask why', // scale results
+    scale_word_err: 'Just one word, no numbers or links',
   },
   ka: {
     tagline: 'გაიცანით უცნობი. დაიმსახურეთ სიტყვები.',
@@ -88,7 +98,7 @@ export const STR = {
     invite_sub: 'გაუგზავნეთ ეს პირადი ბმული. გახსნისთანავე დაგაკავშირებთ.',
     copy: 'კოპირება',
     invite_wait: 'მეგობარს ველოდებით…',
-    invite_share_text: 'შემოდი Talkies-ზე, მხოლოდ ემოჯით ვიწყებთ.',
+    invite_share_text: 'შემოდი Talkies-ზე, ერთი სიტყვით ვიწყებთ.',
     joining: 'მეგობართან დაკავშირება…',
     friend_gone: 'მეგობარი ახლა აქ არ არის',
     cancel: 'გაუქმება',
@@ -130,8 +140,18 @@ export const STR = {
     next_stranger: 'შემდეგი უცნობი',
     share: 'გაზიარება',
     copied: 'დაკოპირდა',
-    share_text: '{brand}-ზე ერთი სიტყვის გარეშე მივაღწიეთ ეტაპს: {stage} {emoji}',
+    share_text: '{brand}-ზე სიტყვა-სიტყვით მივაღწიეთ ეტაპს: {stage} {emoji}',
     link_hidden: 'ბმული დამალულია',
+    scale_title: 'სკალა',
+    scale_give: 'წერტილს მხოლოდ თქვენ ხედავთ. აირჩიეთ სიტყვა, რომელიც იქ ჯდება',
+    scale_own: 'ჩემი სიტყვა',
+    scale_own_ph: 'ერთი სიტყვა…',
+    scale_wait_clue: 'უცნობი სიტყვას არჩევს…',
+    scale_guess: 'სად არის ეს სკალაზე? გადაწიეთ და დააჭირეთ „აქ არის“',
+    scale_lock: 'აქ არის',
+    scale_wait_guess: 'უცნობი გამოცნობას ცდილობს…',
+    scale_bull: 'ზუსტად!', scale_close: 'ძალიან ახლოს!', scale_far: 'სხვანაირად ხედავთ. ჰკითხეთ, რატომ',
+    scale_word_err: 'მხოლოდ ერთი სიტყვა, ციფრებისა და ბმულების გარეშე',
   },
 }
 
@@ -166,3 +186,39 @@ export const PHRASES = [
 ].map(([id, en, ka]) => ({ id, en, ka }))
 
 export const PHRASE_MAP = Object.fromEntries(PHRASES.map(p => [p.id, p]))
+
+// "Scale" rounds: a line between two opposites. One player sees a hidden dot on it and picks a
+// word that belongs there; the other drags a marker to where they think the dot is.
+// Each pair is [English, Georgian]. Words travel as indices, so each screen shows its own language.
+export const SCALES = [
+  { a: ['Cold', 'ცივი'], b: ['Hot', 'ცხელი'], topic: ['Drinks', 'სასმელი'], words: [
+    ['Lemonade', 'ლიმონათი'], ['Coffee', 'ყავა'], ['Tea', 'ჩაი'], ['Hot chocolate', 'ცხელი შოკოლადი'],
+    ['Milk', 'რძე'], ['Kompot', 'კომპოტი'], ['Smoothie', 'სმუზი'], ['Mineral water', 'მინერალური წყალი']] },
+  { a: ['Boring', 'მოსაწყენი'], b: ['Exciting', 'საინტერესო'], topic: ['Hobbies', 'ჰობი'], words: [
+    ['Football', 'ფეხბურთი'], ['Opera', 'ოპერა'], ['Chess', 'ჭადრაკი'], ['Fishing', 'თევზაობა'],
+    ['Yoga', 'იოგა'], ['Video games', 'ვიდეოთამაშები'], ['Gardening', 'მებაღეობა'], ['Dancing', 'ცეკვა']] },
+  { a: ['Healthy', 'ჯანსაღი'], b: ['Unhealthy', 'მავნე'], topic: ['Food', 'საჭმელი'], words: [
+    ['Khinkali', 'ხინკალი'], ['Salad', 'სალათი'], ['Pizza', 'პიცა'], ['Sushi', 'სუში'],
+    ['Churchkhela', 'ჩურჩხელა'], ['Burger', 'ბურგერი'], ['Lobio', 'ლობიო'], ['Chips', 'ჩიფსები']] },
+  { a: ['Cute', 'საყვარელი'], b: ['Scary', 'საშინელი'], topic: ['Animals', 'ცხოველები'], words: [
+    ['Spider', 'ობობა'], ['Cat', 'კატა'], ['Snake', 'გველი'], ['Owl', 'ბუ'],
+    ['Shark', 'ზვიგენი'], ['Hamster', 'ზაზუნა'], ['Bat', 'ღამურა'], ['Goose', 'ბატი']] },
+  { a: ['Relaxing', 'დამამშვიდებელი'], b: ['Stressful', 'სტრესული'], topic: ['Situations', 'სიტუაციები'], words: [
+    ['Exams', 'გამოცდები'], ['Traffic', 'საცობი'], ['Monday', 'ორშაბათი'], ['Rain', 'წვიმა'],
+    ['Airport', 'აეროპორტი'], ['Family dinner', 'ოჯახური ვახშამი'], ['Gym', 'სპორტდარბაზი'], ['Shopping', 'შოპინგი']] },
+  { a: ['Old-school', 'ძველმოდური'], b: ['Modern', 'თანამედროვე'], topic: ['Music', 'მუსიკა'], words: [
+    ['Jazz', 'ჯაზი'], ['Rap', 'რეპი'], ['Polyphony', 'მრავალხმიანობა'], ['Rock', 'როკი'],
+    ['Techno', 'ტექნო'], ['Pop', 'პოპი'], ['Classical', 'კლასიკური'], ['Disco', 'დისკო']] },
+  { a: ['Easy', 'მარტივი'], b: ['Hard', 'რთული'], topic: ['Skills', 'უნარები'], words: [
+    ['Cooking', 'საჭმლის მომზადება'], ['Driving', 'მანქანის ტარება'], ['Swimming', 'ცურვა'], ['Singing', 'სიმღერა'],
+    ['Drawing', 'ხატვა'], ['Math', 'მათემატიკა'], ['Waking up early', 'ადრე ადგომა'], ['Saying no', 'უარის თქმა']] },
+  { a: ['Quiet', 'წყნარი'], b: ['Loud', 'ხმაურიანი'], topic: ['Places', 'ადგილები'], words: [
+    ['Library', 'ბიბლიოთეკა'], ['Stadium', 'სტადიონი'], ['Beach', 'სანაპირო'], ['Café', 'კაფე'],
+    ['Feast', 'სუფრა'], ['Metro', 'მეტრო'], ['Forest', 'ტყე'], ['Wedding', 'ქორწილი']] },
+  { a: ['Cheap', 'იაფი'], b: ['Expensive', 'ძვირი'], topic: ['Gifts', 'საჩუქრები'], words: [
+    ['Flowers', 'ყვავილები'], ['Book', 'წიგნი'], ['Perfume', 'სუნამო'], ['Socks', 'წინდები'],
+    ['Phone', 'ტელეფონი'], ['Concert tickets', 'კონცერტის ბილეთები'], ['Chocolate', 'შოკოლადი'], ['Watch', 'საათი']] },
+  { a: ['Childish', 'ბავშვური'], b: ['Serious', 'სერიოზული'], topic: ['Entertainment', 'გართობა'], words: [
+    ['Cartoons', 'მულტფილმები'], ['News', 'ახალი ამბები'], ['Memes', 'მემები'], ['Poetry', 'პოეზია'],
+    ['Comics', 'კომიქსები'], ['Documentaries', 'დოკუმენტური ფილმები'], ['Board games', 'სამაგიდო თამაშები'], ['Reality shows', 'რეალითი შოუები']] },
+]
