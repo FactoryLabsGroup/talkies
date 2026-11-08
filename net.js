@@ -9,8 +9,8 @@
 // vendor/trystero.js has one change: it leaves its rooms on "pagehide" instead of "beforeunload".
 // beforeunload also fires when the browser asks "Leave site?" and the person then cancels, which
 // cut the stranger off while this tab still showed the chat.
-import { joinRoom, selfId } from './vendor/trystero.js?v=22'
-import { CONFIG } from './config.js?v=22'
+import { joinRoom, selfId } from './vendor/trystero.js?v=23'
+import { CONFIG } from './config.js?v=23'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000

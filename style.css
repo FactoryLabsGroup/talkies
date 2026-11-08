@@ -240,6 +240,7 @@ body[data-screen="match"] .nav { max-width: 1792px; height: 56px; padding: 0 16p
 .react-burst img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .45)); }
 @keyframes burst { 0% { opacity: 0; transform: scale(.3); } 22% { opacity: 1; transform: scale(1.15); } 60% { opacity: 1; transform: translateY(-14px) scale(1); } 100% { opacity: 0; transform: translateY(-46px) scale(.9); } }
 .react-pop button:hover { background: var(--surface-2); transform: scale(1.12); }
+.react-pop button.on { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-ring); }
 
 .jinx { align-self: center; text-align: center; min-width: 260px; padding: 16px 20px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); animation: in .3s var(--ease); }
 .jinx-title { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }

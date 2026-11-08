@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=22'
-import { STR, LANGS } from './i18n.js?v=22'
-import { Net } from './net.js?v=22'
+import { CONFIG } from './config.js?v=23'
+import { STR, LANGS } from './i18n.js?v=23'
+import { Net } from './net.js?v=23'
 
 // Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
 // call only, and finally everything at once plus swapping contacts. A step opens once enough time
@@ -643,7 +643,7 @@ function onGame(m) {
       break
     }
     case 'ack': $('#feed').querySelector(`.row.me .bubble[data-id="${CSS.escape(String(m.id))}"]`)?.classList.add('sent'); break
-    case 'r': if (REACT_CODE[m.e]) addReaction(String(m.id), m.e, 'mine'); break
+    case 'r': if (m.e === '' || REACT_CODE[m.e]) setReaction(String(m.id), m.e, 'mine'); break
     case 's': if (!H) applyState(m); break
     case 'ok': if (H && m.s === H.stage) hostConsent(1); break
     case 'cx': swapReady(); break
@@ -1542,25 +1542,34 @@ function notoImg(e, animate) {
   return img
 }
 
+// Tapping a message again opens the picker with my current reaction marked: another emoji
+// replaces it, the same one takes it off.
 function openReactions(bubble, id) {
-  if (bubble.querySelector('.react.me') || bubble.parentElement.querySelector('.react-pop')) return
+  if (bubble.parentElement.querySelector('.react-pop')) return
+  const current = bubble.querySelector('.react.me')?.dataset.e || ''
   const pop = h('div', { class: 'react-pop' }, REACTIONS.map(([e]) =>
-    h('button', { type: 'button', 'aria-label': e, onclick: ev => {
+    h('button', { type: 'button', class: e === current ? 'on' : null, 'aria-label': e, 'aria-pressed': String(e === current), onclick: ev => {
       ev.stopPropagation()
       pop.remove()
       if (!G || G.ended) return
-      if (addReaction(id, e, 'theirs', 'me')) net.send({ t: 'r', id, e })
+      const next = e === current ? '' : e
+      if (setReaction(id, next, 'theirs', 'me')) net.send({ t: 'r', id, e: next })
     } }, notoImg(e, false))))
   bubble.after(pop)
   setTimeout(() => pop.remove(), 8000)
 }
 
-// whose: which side's bubble ('mine' = a bubble I sent). by: who reacted. The emoji pops up big
-// over the message, then stays small and animated in its corner.
-function addReaction(id, e, whose, by = 'them') {
+// whose: which side's bubble ('mine' = a bubble I sent). by: who reacted. e: the emoji, or ''
+// to take the reaction off. A new emoji pops up big over the message, then stays small and
+// animated in its corner.
+function setReaction(id, e, whose, by = 'them') {
   const bubble = $('#feed').querySelector(`.row.${whose === 'mine' ? 'me' : 'them'} .bubble[data-id="${CSS.escape(id)}"]`)
-  if (!bubble || bubble.querySelector(`.react.${by}`)) return false
-  bubble.append(h('span', { class: `react ${by}` }, notoImg(e, true)))
+  if (!bubble) return false
+  const old = bubble.querySelector(`.react.${by}`)
+  if ((old?.dataset.e || '') === e) return false
+  old?.remove()
+  if (!e) return true
+  bubble.append(h('span', { class: `react ${by}`, 'data-e': e }, notoImg(e, true)))
   const pop = h('span', { class: 'react-burst', 'aria-hidden': 'true' }, notoImg(e, false))
   bubble.append(pop)
   setTimeout(() => pop.remove(), 1200)
