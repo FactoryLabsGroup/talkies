@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Talkies</title>
-  <meta name="description" content="Meet a stranger. Earn your words. Start with GIFs, then unlock text, voice, video and contacts when you both want to.">
+  <meta name="description" content="Meet a stranger. Earn your words. Start with GIFs, then unlock text, a voice call, video and contacts when you both want to.">
   <meta name="theme-color" content="#09090B">
   <meta name="color-scheme" content="dark">
   <meta property="og:title" content="Talkies">
@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=23">
-  <script type="module" src="app.js?v=23"></script>
+  <link rel="stylesheet" href="style.css?v=24">
+  <script type="module" src="app.js?v=24"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -146,9 +146,10 @@
           <span id="themMuted" class="v-muted" hidden><span class="ico" data-icon="micOff"></span></span>
           <div id="localTile" class="v-local" hidden><video id="localVid" autoplay playsinline muted></video></div>
           <div class="v-bar">
-            <button id="vStart" class="v-btn start" type="button"><span class="ico" data-icon="s4"></span><span data-i="cam_on"></span></button>
+            <button id="vStart" class="v-btn start" type="button"><span class="ico" data-icon="s3"></span><span data-i="call_join"></span></button>
             <button id="vMic" class="v-btn" type="button" data-aria="mute" hidden></button>
             <button id="vCam" class="v-btn" type="button" data-aria="cam_toggle" hidden></button>
+            <button id="vFlip" class="v-btn" type="button" data-aria="flip" hidden><span class="ico" data-icon="flip"></span></button>
             <button id="vEnd" class="v-btn end" type="button" data-aria="hang_up" hidden><span class="ico" data-icon="hang"></span></button>
           </div>
         </div>
@@ -173,12 +174,6 @@
             <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" maxlength="300" data-ph="free_ph">
             <button id="sendBtn" class="send" type="button" disabled aria-label="Send"><span class="ico" data-icon="send"></span></button>
             <button id="soloBtn" class="solo-btn" type="button" hidden></button>
-          </div>
-          <div id="rec" class="tray rec" hidden>
-            <button id="recCancel" class="mic-btn" type="button" data-aria="cancel"><span class="ico" data-icon="x"></span></button>
-            <span class="rec-dot"></span><span id="recTime" class="rec-time">0:00</span>
-            <span id="recWave" class="rec-wave"></span>
-            <button id="recSend" class="send" type="button" data-aria="send"><span class="ico" data-icon="send"></span></button>
           </div>
         </div>
       </div>

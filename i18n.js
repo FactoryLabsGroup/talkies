@@ -35,20 +35,20 @@ export const STR = {
     // The five steps: name and what you can send on it. Only steps reached so far are shown.
     s1: 'Wordless', d1: 'GIFs only',
     s2: 'In words', d2: 'Text, GIFs and photos',
-    s3: 'By voice', d3: 'Voice messages only',
+    s3: 'By voice', d3: 'Voice call only',
     s4: 'Face to face', d4: 'Video call only',
     s5: 'Introduced', d5: 'Everything’s open, and you can swap contacts',
     // A finished step in the sidebar, {n} = messages of that kind sent in it by both of you
     done_1: '{n} GIFs', done_1_one: '1 GIF',
     done_2: '{n} messages', done_2_one: '1 message',
-    done_3: '{n} voice messages', done_3_one: '1 voice message',
+    done_3: 'You talked', done_3_none: 'Without a call',
     done_4: 'You saw each other', done_4_none: 'Without video',
     // Consent bar above the composer
     ask_1: 'Switch to text?',
-    ask_2: 'Turn on voice messages?',
+    ask_2: 'Turn on voice calls?',
     ask_3: 'Turn on video?',
     ask_4: 'Swap contacts?',
-    them_1: 'They want to switch to text', them_2: 'They want to turn on voice messages', them_3: 'They want to turn on video', them_4: 'They want to swap contacts',
+    them_1: 'They want to switch to text', them_2: 'They want to turn on voice calls', them_3: 'They want to turn on video', them_4: 'They want to swap contacts',
     // The "?" step after the current one in the ladder (what it is stays hidden)
     next_step: 'Next step',
     next_locked: 'Still locked', next_soon: 'Opening soon…', next_ready: 'Ready to open',
@@ -63,25 +63,27 @@ export const STR = {
     free_ph: 'Say anything…',                              // text field
     send: 'Send', react: 'React',
 
-    // Voice messages
-    voice_btn: 'Record a voice message',                   // mic button (screen readers)
-    voice_rec: 'Record a voice message',                   // the one big button on the voice-only step
-    play: 'Play',
+    // Voice call (step 3). The call goes on into step 4, where the camera can be turned on.
+    voice_btn: 'Voice call',                               // phone button in the composer, last step (screen readers)
+    voice_note: 'Start a voice call when you’re ready. You only hear each other once you’re both on it.', // feed note when the call opens
+    call_start: 'Start a voice call',                      // the one big button on the voice-only step
+    call_join: 'Join the call',                            // same button, and in the call area, when they're already on
+    call_end: 'End call',                                  // big button while I'm on the call
+    call_wait: 'Waiting for them to join…',                // call area, I'm on and they aren't
+    call_them: 'They’re on the call',                      // call area, they're on and I'm not
+    call_live: 'On the call · {time}',                     // call area, both on, {time} = 0:42
     mic_denied: 'Microphone access is off. Turn it on in your browser settings',
-    mic_none: 'Voice messages don’t work in this browser',
-    voice_cant: 'This voice message can’t play on this device',
-    voice_big: 'That recording is too large',
-    rec_failed: 'Nothing was recorded. Try again',
+    call_none: 'Calls don’t work in this browser',
 
     // Video call (step 4)
     video_btn: 'Video call',                               // camera button in the composer (screen readers)
     video_note: 'Turn on your camera when you’re ready. Their video stays blurred until you tap it.', // feed note when video opens
     video_show: 'Show video',                              // button on their blurred video
-    video_wait: 'Their camera is off',                     // video area, they haven't turned it on
-    cam_off_them: 'They turned their camera off',          // video area, they paused the camera
-    cam_on: 'Turn on camera',                              // video area and the big button on the video-only step
-    cam_stop: 'Turn off camera',                           // big button on the video-only step while the camera is on
-    mute: 'Microphone', cam_toggle: 'Camera', hang_up: 'End video', // call controls (screen readers)
+    cam_off_them: 'Their camera is off',                   // call area, both on the call, their camera off
+    cam_on: 'Turn on camera',                              // the big button on the video-only step
+    cam_stop: 'Turn off camera',                           // same button while the camera is on
+    mute: 'Microphone', cam_toggle: 'Camera', hang_up: 'End call', // call controls (screen readers)
+    flip: 'Switch camera',                                 // front / back camera (screen readers)
     cam_denied: 'Camera access is off. Turn it on in your browser settings',
     cam_none: 'Video calls don’t work in this browser',
 
@@ -110,7 +112,7 @@ export const STR = {
     end_left: 'They left',
     end_lost: 'Connection lost',
     reached: 'Reached',
-    stat_time: 'Time', stat_gifs: 'GIFs', stat_texts: 'Messages', stat_voice: 'Voice',
+    stat_time: 'Time', stat_gifs: 'GIFs', stat_texts: 'Messages', stat_call: 'Call', // stat_call: time on a call together
     story: 'Your GIFs',
     share: 'Share',
     copied: 'Copied',
@@ -160,18 +162,18 @@ export const STR = {
 
     s1: 'უხმოდ', d1: 'მხოლოდ GIF‑ები',
     s2: 'სიტყვებით', d2: 'ტექსტი, GIF‑ები და სურათები',
-    s3: 'ხმით', d3: 'მხოლოდ ხმოვანი შეტყობინებები',
+    s3: 'ხმით', d3: 'მხოლოდ ხმოვანი ზარი',
     s4: 'პირისპირ', d4: 'მხოლოდ ვიდეოზარი',
     s5: 'გაცნობა', d5: 'ყველაფერი ღიაა და კონტაქტების გაცვლაც შეგიძლიათ',
     done_1: '{n} GIF',
     done_2: '{n} შეტყობინება',
-    done_3: '{n} ხმოვანი',
+    done_3: 'ისაუბრეთ', done_3_none: 'ზარის გარეშე',
     done_4: 'ერთმანეთი დაინახეთ', done_4_none: 'ვიდეოს გარეშე',
     ask_1: 'გადავიდეთ ტექსტზე?',
-    ask_2: 'ჩავრთოთ ხმოვანი შეტყობინებები?',
+    ask_2: 'ჩავრთოთ ხმოვანი ზარი?',
     ask_3: 'ჩავრთოთ ვიდეო?',
     ask_4: 'გავცვალოთ კონტაქტები?',
-    them_1: 'უცნობს ტექსტზე გადასვლა სურს', them_2: 'უცნობს ხმოვანი შეტყობინებების ჩართვა სურს', them_3: 'უცნობს ვიდეოს ჩართვა სურს', them_4: 'უცნობს კონტაქტების გაცვლა სურს',
+    them_1: 'უცნობს ტექსტზე გადასვლა სურს', them_2: 'უცნობს ხმოვანი ზარის ჩართვა სურს', them_3: 'უცნობს ვიდეოს ჩართვა სურს', them_4: 'უცნობს კონტაქტების გაცვლა სურს',
     next_step: 'შემდეგი ეტაპი',
     next_locked: 'ჯერ დახურულია', next_soon: 'მალე გაიხსნება…', next_ready: 'გასახსნელად მზადაა',
     consent_both: 'საჭიროა ორივეს თანხმობა',
@@ -185,23 +187,25 @@ export const STR = {
     free_ph: 'დაწერეთ რამე…',
     send: 'გაგზავნა', react: 'რეაქცია',
 
-    voice_btn: 'ხმოვანი შეტყობინების ჩაწერა',
-    voice_rec: 'ხმოვანის ჩაწერა',
-    play: 'მოსმენა',
+    voice_btn: 'ხმოვანი ზარი',
+    voice_note: 'ზარი დაიწყეთ, როცა მზად იქნებით. ერთმანეთს მხოლოდ მაშინ გაიგონებთ, როცა ორივე ზარში იქნებით.',
+    call_start: 'ხმოვანი ზარის დაწყება',
+    call_join: 'ზარში შესვლა',
+    call_end: 'ზარის დასრულება',
+    call_wait: 'უცნობის შემოსვლას ველოდებით…',
+    call_them: 'უცნობი ზარშია',
+    call_live: 'საუბრობთ · {time}',
     mic_denied: 'მიკროფონზე წვდომა გამორთულია. ჩართეთ ბრაუზერის პარამეტრებში',
-    mic_none: 'ამ ბრაუზერში ხმოვანი შეტყობინებები არ მუშაობს',
-    voice_cant: 'ეს ხმოვანი ამ მოწყობილობაზე ვერ ირთვება',
-    voice_big: 'ჩანაწერი ძალიან დიდია',
-    rec_failed: 'ვერაფერი ჩაიწერა. სცადეთ თავიდან',
+    call_none: 'ამ ბრაუზერში ზარები არ მუშაობს',
 
     video_btn: 'ვიდეოზარი',
     video_note: 'კამერა ჩართეთ, როცა მზად იქნებით. უცნობის ვიდეო ბუნდოვანი იქნება, სანამ თავად არ დააჭერთ.',
     video_show: 'ვიდეოს ჩვენება',
-    video_wait: 'უცნობის კამერა გამორთულია',
-    cam_off_them: 'უცნობმა კამერა გამორთო',
+    cam_off_them: 'უცნობის კამერა გამორთულია',
     cam_on: 'კამერის ჩართვა',
     cam_stop: 'კამერის გამორთვა',
-    mute: 'მიკროფონი', cam_toggle: 'კამერა', hang_up: 'ვიდეოს დასრულება',
+    mute: 'მიკროფონი', cam_toggle: 'კამერა', hang_up: 'ზარის დასრულება',
+    flip: 'კამერის გადართვა',
     cam_denied: 'კამერაზე წვდომა გამორთულია. ჩართეთ ბრაუზერის პარამეტრებში',
     cam_none: 'ამ ბრაუზერში ვიდეოზარი არ მუშაობს',
 
@@ -227,7 +231,7 @@ export const STR = {
     end_left: 'უცნობი წავიდა',
     end_lost: 'კავშირი გაწყდა',
     reached: 'მიღწეული ეტაპი',
-    stat_time: 'დრო', stat_gifs: 'GIF', stat_texts: 'შეტყობინება', stat_voice: 'ხმოვანი',
+    stat_time: 'დრო', stat_gifs: 'GIF', stat_texts: 'შეტყობინება', stat_call: 'ზარი',
     story: 'თქვენი GIF‑ები',
     share: 'გაზიარება',
     copied: 'დაკოპირდა',

@@ -2,15 +2,16 @@
 // Everyone on the site sits in one lobby room. People who are searching pair up with a
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
 // Private invites skip the lobby: both people join a room named after a secret code from the
-// link, and whoever shows up there first becomes the partner. Voice messages go through their
-// own action, as binary data with a small metadata object. A video call adds a camera stream to
-// the room the partner is in.
+// link, and whoever shows up there first becomes the partner. Photos go through their own action,
+// as binary data with a small metadata object. A call adds a microphone stream to the room the
+// partner is in; turning the camera on adds a video track to it, and switching between the front
+// and back camera swaps that track for another without starting over.
 
 // vendor/trystero.js has one change: it leaves its rooms on "pagehide" instead of "beforeunload".
 // beforeunload also fires when the browser asks "Leave site?" and the person then cancels, which
 // cut the stranger off while this tab still showed the chat.
-import { joinRoom, selfId } from './vendor/trystero.js?v=23'
-import { CONFIG } from './config.js?v=23'
+import { joinRoom, selfId } from './vendor/trystero.js?v=24'
+import { CONFIG } from './config.js?v=24'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
@@ -33,8 +34,8 @@ export class Net {
     this.timer = null
     this.priv = null           // private invite room { room, g }
     this.game = null           // the action game messages go through (lobby or private)
-    this.voice = null          // and the one for files: voice messages and photos
-    this.media = null          // the room camera streams go through
+    this.voice = null          // and the one for files (photos)
+    this.media = null          // the room call streams go through
   }
 
   start() {
@@ -49,6 +50,8 @@ export class Net {
     this.v = this.voice = this.room.makeAction('v')
     this.media = this.room
     this.room.onPeerStream = (stream, peerId) => this.receiveStream(stream, peerId, this.room)
+    // A camera turned on in a voice call arrives as a track on its own, not as a new stream.
+    this.room.onPeerTrack = (track, stream, peerId) => this.receiveStream(stream, peerId, this.room)
 
     this.room.onPeerJoin = id => {
       this.peers.set(id, 'idle')
@@ -96,6 +99,7 @@ export class Net {
     g.onMessage = (m, { peerId }) => this.receive(m, peerId, g)
     v.onMessage = (d, { peerId, metadata }) => this.receiveVoice(d, metadata, peerId, v)
     room.onPeerStream = (stream, peerId) => this.receiveStream(stream, peerId, room)
+    room.onPeerTrack = (track, stream, peerId) => this.receiveStream(stream, peerId, room)
     room.onPeerJoin = id => { if (!this.partner && this.priv?.room === room) this.begin(id, g, v, room) }
     room.onPeerLeave = id => {
       if (id === this.partner && this.game === g) { this.partner = null; this.h.onPartnerGone() }
@@ -199,8 +203,22 @@ export class Net {
     if (this.partner) Promise.resolve(this.media.addStream(stream, { target: this.partner })).catch(() => {})
   }
 
+  // A track added to a stream that's already being sent: the camera, turned on during a voice call.
+  addTrack(track, stream) {
+    if (this.partner) Promise.resolve(this.media.addTrack(track, stream, { target: this.partner })).catch(() => {})
+  }
+
+  // Send another track in place of one already going out (the front camera for the back one).
+  replaceTrack(old, track) {
+    if (this.partner) Promise.resolve(this.media.replaceTrack(old, track, { target: this.partner })).catch(() => {})
+  }
+
   removeStream(stream, peer = this.partner) {
     if (!peer) return
+    // Tracks added on their own are taken back on their own; the rest go with the stream.
+    for (const track of stream.getTracks()) {
+      try { Promise.resolve(this.media.removeTrack(track, { target: peer })).catch(() => {}) } catch {}
+    }
     try { Promise.resolve(this.media.removeStream(stream, { target: peer })).catch(() => {}) } catch {}
   }
 

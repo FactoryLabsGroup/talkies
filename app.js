@@ -1,8 +1,8 @@
-import { CONFIG } from './config.js?v=23'
-import { STR, LANGS } from './i18n.js?v=23'
-import { Net } from './net.js?v=23'
+import { CONFIG } from './config.js?v=24'
+import { STR, LANGS } from './i18n.js?v=24'
+import { Net } from './net.js?v=24'
 
-// Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
+// Talkies: two strangers climb five steps: GIFs only, then words, a voice call only, a video
 // call only, and finally everything at once plus swapping contacts. A step opens once enough time
 // has passed and both have sent enough of the current kind of message, and only if both agree.
 // Neither the time nor what comes next is shown; the consent bar names the next step when it's ready.
@@ -10,21 +10,20 @@ import { Net } from './net.js?v=23'
 // ---------------------------------------------------------------- content
 
 const FAST = new URLSearchParams(location.search).has('fast')
-// allow: what you can send on the step ('g' GIFs, 'w' text, 'i' photos, 'v' voice messages,
-// 'c' the camera). kind: which messages count toward opening the next step (photos count as
+// allow: what you can use on the step ('g' GIFs, 'w' text, 'i' photos, 'v' a call, 'c' the
+// camera in that call). kind: which messages count toward opening the next step (photos count as
 // text). need: how many of them each side sends. time: how long the step lasts at least.
 const STAGES = [null,
   { allow: 'g', kind: 'g', need: FAST ? 1 : 3, time: FAST ? 10000 : 60000 },
   { allow: 'gwi', kind: 'w', need: FAST ? 1 : 5, time: FAST ? 10000 : 90000 },
-  { allow: 'v', kind: 'v', need: 1, time: FAST ? 10000 : 45000 },
-  { allow: 'c', kind: '', need: 0, time: FAST ? 10000 : 60000 },   // video: the camera is optional, only time counts
+  { allow: 'v', kind: '', need: 0, time: FAST ? 10000 : 45000 },    // voice call: joining is optional, only time counts
+  { allow: 'vc', kind: '', need: 0, time: FAST ? 10000 : 60000 },   // video: a voice call goes on, the camera is optional
   { allow: 'gwivc', last: true },
 ]
+const VOICE = 3
 const VIDEO = 4
 const LAST = STAGES.length - 1
 const TEXT_MAX = 300
-const VOICE_MAX = 30000          // longest voice message, ms
-const VOICE_BYTES = 800 * 1024   // and the largest file accepted
 const CONTACT_MAX = 40
 const IMG_PX = 1280                // photos in the chat are scaled down to this longest side
 const IMG_BYTES = 700 * 1024       // and the largest photo accepted
@@ -74,15 +73,15 @@ const ICONS = {
   search: SVG('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
   s1: SVG('<rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.2" text-anchor="middle" font-size="7.2" font-weight="800" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">GIF</text>', 1.6),
   s2: SVG('<path d="M20 15.5a2 2 0 0 1-2 2H8l-4 3.5V5.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>'),
-  s3: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>'),
+  s3: SVG('<path d="M5 3.5h3.2l1.6 4.2-2.2 1.5a11 11 0 0 0 7.2 7.2l1.5-2.2 4.2 1.6V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.1 1.5 1.5 0 0 1 5 3.5z"/>'),
+  mic: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>'),
   s4: SVG('<rect x="2.5" y="6" width="13" height="12" rx="3"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/>'),
   camOff: SVG('<rect x="2.5" y="6" width="13" height="12" rx="3"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/><path d="M2 3l20 18"/>'),
   micOff: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M3 3l18 18"/>'),
+  flip: SVG('<path d="M4 8h2.5L8 6h8l1.5 2H20a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 4 8z"/><path d="M9.3 12.4a2.9 2.9 0 0 1 5.1-1.2"/><path d="M14.7 14.6a2.9 2.9 0 0 1-5.1 1.2"/><path d="M14.6 9.6v1.8h-1.8"/><path d="M9.4 17.4v-1.8h1.8"/>', 1.8),
   hang: SVG('<path d="M3 15.5c4.9-4.7 13.1-4.7 18 0l-2.3 2.5-3.4-1.5.1-2.6a11 11 0 0 0-6.8 0l.1 2.6-3.4 1.5z"/>'),
   eye: SVG('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
   s5: SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>'),
-  play: SVG('<path d="M7.5 4.8v14.4L19 12z" fill="currentColor"/>'),
-  pause: SVG('<path d="M8.5 5v14M15.5 5v14"/>', 3),
   x: SVG('<path d="M18 6 6 18M6 6l12 12"/>'),
   image: SVG('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m20.5 16.5-5-5L6 20"/>'),
   expand: SVG('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),
@@ -279,7 +278,7 @@ function show(name) {
 }
 
 // ---------------------------------------------------------------- landing demo
-// A looping make-believe match: a few GIFs back and forth, text opens, words, then voice opens.
+// A looping make-believe match: a few GIFs back and forth, text opens, words, then a voice call.
 
 const giphy = (id, w, h) => ({ gif: `https://media.giphy.com/media/${id}/200.webp`, w, h })
 const W = (en, ka) => ({ text: { en, ka } })
@@ -293,7 +292,7 @@ const DEMO = [
   { who: 'them', ...W('Okay, words now. Hi!', 'კარგი, ახლა სიტყვებით. გამარჯობა!') },
   { who: 'me', ...W('Hi! Great taste in GIFs', 'გამარჯობა! GIF‑ებში კარგი გემოვნება გაქვს') },
   { unlock: 3 },
-  { who: 'them', voice: 7 },
+  { who: 'them', call: 7 },
 ]
 const DEMO_WAVE = [30, 55, 80, 45, 70, 100, 60, 35, 75, 50, 90, 40, 65, 30, 55, 85, 45, 25, 50, 70]
 let demoRun = 0
@@ -328,13 +327,22 @@ function startDemo() {
     }
   })()
 }
-function demoRow({ who, gif, w, h: gh, text, voice }) {
+function demoRow({ who, gif, w, h: gh, text, call }) {
   const height = 76
   const bubble = gif
     ? h('div', { class: 'bubble has-gif' }, h('img', { class: 'gif-msg', src: gif, width: Math.round(w * height / gh), height, alt: '', referrerpolicy: 'no-referrer' }))
-    : voice ? h('div', { class: 'bubble voice' }, h('span', { class: 'vplay' }, icon('play')), wave(DEMO_WAVE), h('span', { class: 'vtime' }, clock(voice * 1000)))
+    : call ? h('div', { class: 'bubble voice call' }, h('span', { class: 'vplay' }, icon('s3')), wave(DEMO_WAVE), h('span', { class: 'vtime' }, clock(call * 1000)))
     : h('div', { class: 'bubble' }, h('span', {}, text[lang]))
   return h('div', { class: `row ${who}` }, who === 'them' && ava(DEMO_SEEDS[1]), bubble)
+}
+// Sound bars. In the demo call they bounce, each a little out of step with the others.
+function wave(peaks) {
+  return h('span', { class: 'vwave' }, peaks.map((p, n) => {
+    const i = h('i')
+    i.style.height = `${Math.round(4 + p * 0.2)}px`
+    i.style.animationDelay = `-${(n * 0.37) % 1.1}s`
+    return i
+  }))
 }
 
 let online = 1
@@ -371,7 +379,7 @@ const net = new Net({
   onCount: n => { online = n; renderCount(); renderDebug() },
   onMatch: (partner, isHost) => startMatch(partner, isHost),
   onGame: msg => onGame(msg),
-  onFile: (data, meta) => (meta?.k === 'img' ? onPhoto(data, meta) : onVoice(data, meta)),
+  onFile: (data, meta) => { if (meta?.k === 'img') onPhoto(data, meta) },
   onStream: stream => onStream(stream),
   onPartnerGone: () => endMatch('left'),
 })
@@ -463,7 +471,7 @@ function startMatch(partner, isHost) {
     partner, host: isHost, them: null, theyGotMine: false, ended: false,
     view: { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0] },
     leftEnd: now() + STAGES[1].time, startedAt: now(), connectedAt: 0, heardAt: now(), maxStage: 1,
-    gifs: [], gifCount: 0, textCount: 0, voiceCount: 0, stageCnt: STAGES.map(() => 0),
+    gifs: [], gifCount: 0, textCount: 0, stageCnt: STAGES.map(() => 0),
     lastSend: 0, timers: [], gifOpen: true, urls: [],
     swap: { mine: '', theyReady: false, sentMine: false, theirs: '', done: false },
     video: newVideo(), soon: '',
@@ -490,6 +498,7 @@ function startMatch(partner, isHost) {
   G.timers.push(setTimeout(() => { if (G && !G.them && !G.ended) abortMatch() }, 9000))
   G.timers.push(setInterval(renderThem, 15000))
   G.timers.push(setInterval(renderSoon, 1000))
+  G.timers.push(setInterval(tickCall, 1000))
   G.timers.push(setInterval(beat, BEAT_MS))
   if (isHost) G.timers.push(setInterval(hostTick, 250))
 }
@@ -497,9 +506,7 @@ function startMatch(partner, isHost) {
 function clearMatchTimers() {
   if (!G) return
   G.timers.forEach(x => { clearInterval(x); clearTimeout(x) })
-  stopRec(false)
-  playing?.stop()
-  stopVideo(G.partner)
+  stopCall(G.partner)
   G.urls.forEach(u => URL.revokeObjectURL(u))
   $('#remoteVid').srcObject = $('#remoteBg').srcObject = $('#localVid').srcObject = null
   $('#video').hidden = true
@@ -716,7 +723,7 @@ function applyState(s) {
     if (stage > prev.stage) {
       G.maxStage = Math.max(G.maxStage, stage)
       if (stage === 2) G.gifOpen = false
-      if (!allows('v')) stopRec(false)
+      if (stage === VOICE) pushFeed(h('div', { class: 'feed-note' }, icon('s3'), h('span', {}, t('voice_note'))))
       if (stage === VIDEO) pushFeed(h('div', { class: 'feed-note' }, icon('s4'), h('span', {}, t('video_note'))))
       levelUpFx(stage)
     }
@@ -785,7 +792,8 @@ function renderLadder() {
   const v = G.view
   $('#ladder').replaceChildren(...STAGES.slice(1, v.stage + 1).map((st, j) => {
     const i = j + 1, done = i < v.stage
-    const desc = done ? (i === VIDEO ? t(G.video.saw ? 'done_4' : 'done_4_none') : tn('done_' + i, G.stageCnt[i]))
+    const desc = done ? (i === VOICE ? t(G.video.talked ? 'done_3' : 'done_3_none') : i === VIDEO ? t(G.video.saw ? 'done_4' : 'done_4_none')
+      : tn('done_' + i, G.stageCnt[i]))
       : st.last && G.swap.done ? t('swapped') : t('d' + i)
     return h('li', { class: `step-row ${done ? 'done' : 'now'}` },
       h('span', { class: 'dot' }, icon(done ? 'check' : 's' + i)),
@@ -889,39 +897,25 @@ function sendText() {
 }
 
 // Composer. GIFs only: the picker is always open. With words: the text field, plus buttons for
-// GIFs and photos. Voice only or video only: one big button and nothing else. The last step has
-// everything, the mic and camera as small buttons.
+// GIFs and photos. Voice call only or video only: one big button and nothing else. The last step
+// has everything, a voice call and a video call as small buttons.
 function renderComposer() {
   const allow = STAGES[G.view.stage].allow, text = allows('w')
-  const solo = allow === 'v' || allow === 'c'
-  $('#tray').hidden = allow === 'g' || !!rec
-  $('#rec').hidden = !rec
+  const solo = !text && allow !== 'g'
+  $('#tray').hidden = allow === 'g'
   $('#tray').classList.toggle('solo', solo)
   $('#soloBtn').hidden = !solo
   for (const id of ['gifBtn', 'imgBtn', 'textIn', 'sendBtn']) $('#' + id).hidden = !text
-  $('#micBtn').hidden = solo || !allows('v')
-  $('#camBtn').hidden = solo || !allows('c')
   const gifs = allow === 'g' || (text && G.gifOpen)
   $('#gifPanel').hidden = !gifs
   $('#gifBtn').classList.toggle('on', gifs && text)
   $('#gifBtn').setAttribute('aria-expanded', String(gifs && text))
   if (gifs && !gifState.loaded) loadGifs()
-  renderSolo()
+  renderCallBtns()
   updateSend()
   renderSwap()
 }
 
-// The one big button on the voice-only and video-only steps.
-function renderSolo() {
-  const allow = STAGES[G.view.stage].allow, b = $('#soloBtn'), on = !!G.video.local
-  if (allow === 'v') { b.classList.remove('on'); b.replaceChildren(icon('s3'), h('span', {}, t('voice_rec'))) }
-  if (allow === 'c') { b.classList.toggle('on', on); b.replaceChildren(icon(on ? 'camOff' : 's4'), h('span', {}, t(on ? 'cam_stop' : 'cam_on'))) }
-}
-$('#soloBtn').addEventListener('click', () => {
-  if (allows('w')) return
-  if (allows('v')) startRec()
-  else if (allows('c')) G.video.local ? stopVideo() : startVideo()
-})
 function updateSend() { $('#sendBtn').disabled = !$('#textIn').value.trim() }
 
 $('#sendBtn').addEventListener('click', sendText)
@@ -934,281 +928,269 @@ $('#gifBtn').addEventListener('click', () => {
   if (G.gifOpen) $('#gifSearch').focus({ preventScroll: true })
 })
 
-// ---------------------------------------------------------------- voice messages
-// Recorded in the browser and sent straight to the other person over the same peer-to-peer
-// connection as everything else. Nothing is uploaded anywhere.
+// ---------------------------------------------------------------- calls (steps 3 and 4)
+// A voice call on step 3. On step 4 the same call goes on and the camera can be turned on in it.
+// Microphone and camera go straight to the other person. Nobody's microphone or camera turns on
+// by itself, you hear the stranger only once you're on the call too, and their video stays
+// blurred until you tap it, again every time their camera comes on. A phone can switch between
+// its front and back camera during the call.
 
-const VOICE_TYPES = ['audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus']
-let rec = null          // the recording in progress
-let recStarting = false
-let playing = null      // the voice message playing now: { audio, stop }
+const AUDIO = { echoCancellation: true, noiseSuppression: true }
+const CAM = { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } }
+const denied = e => e?.name === 'NotAllowedError' || e?.name === 'SecurityError'
+const openCam = async video => (await navigator.mediaDevices.getUserMedia({ video })).getVideoTracks()[0]
 
-async function startRec() {
-  if (!G || G.ended || !allows('v') || rec || recStarting) return
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return toast(t('mic_none'))
-  recStarting = true
-  playing?.stop()
-  // Made inside the tap so the browser lets it run. It only measures loudness for the waveform.
-  let ctx = null
-  try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch {}
-  let stream
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }) }
-  catch { recStarting = false; ctx?.close(); return toast(t('mic_denied')) }
-  recStarting = false
-  const quit = () => { stream.getTracks().forEach(x => x.stop()); ctx?.close() }
-  if (!G || G.ended || !allows('v')) return quit()
-  const mimeType = VOICE_TYPES.find(x => MediaRecorder.isTypeSupported?.(x))
-  let mr
-  try { mr = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 32000 }) }
-  catch { quit(); return toast(t('mic_none')) }
+// local: my stream while I'm on the call. cam: my camera is on. facing: which way it looks
+// ('user' is the front). cams: how many cameras this device has. them: what the stranger says
+// about their side. revealed: their video has been tapped. talked / saw: for the ladder.
+// together / since: how long we've both been on the call. busy: a camera is being opened.
+const newVideo = () => ({ local: null, remote: null, mic: true, cam: false, facing: 'user', cams: 0,
+  them: { on: false, mic: true, cam: false }, revealed: false, talked: false, saw: false, together: 0, since: 0, busy: false })
+const camTrack = () => G?.video.local?.getVideoTracks()[0] || null
 
-  const r = rec = { mr, stream, ctx, chunks: [], levels: [], start: now(), send: false, tick: 0 }
-  mr.ondataavailable = e => { if (e.data?.size) r.chunks.push(e.data) }
-  mr.onstop = () => finishRec(r)
-  mr.start(250)
-  let analyser = null, buf = null
-  try {
-    analyser = ctx.createAnalyser()
-    analyser.fftSize = 512
-    ctx.createMediaStreamSource(stream).connect(analyser)
-    buf = new Uint8Array(analyser.fftSize)
-    ctx.resume?.()
-  } catch { analyser = null }
-  const waveEl = $('#recWave')
-  waveEl.replaceChildren()
-  $('#recTime').textContent = clock(0)
-  r.tick = setInterval(() => {
-    const ms = now() - r.start
-    $('#recTime').textContent = clock(ms)
-    let level = 0
-    if (analyser) {
-      analyser.getByteTimeDomainData(buf)
-      let sum = 0
-      for (const b of buf) sum += ((b - 128) / 128) ** 2
-      level = Math.sqrt(sum / buf.length)
-    }
-    r.levels.push(level)
-    const bar = h('i')
-    bar.style.height = `${Math.round(4 + Math.min(1, level * 5) * 20)}px`
-    waveEl.append(bar)
-    while (waveEl.children.length > 60) waveEl.firstElementChild.remove()
-    if (ms >= VOICE_MAX) stopRec(true)
-  }, 100)
-  renderComposer()
-  vibrate(15)
-}
-
-function stopRec(send) {
-  if (!rec) return
-  const r = rec
-  rec = null
-  r.send = send
-  r.dur = Math.min(VOICE_MAX, now() - r.start)
-  clearInterval(r.tick)
-  try { if (r.mr.state !== 'inactive') r.mr.stop() } catch {}
-  r.stream.getTracks().forEach(x => x.stop())
-  try { r.ctx?.close() } catch {}
-  if (G && !G.ended) renderComposer()
-}
-
-function finishRec(r) {
-  if (!r.send || !G || G.ended || r.dur < 600) return
-  const blob = new Blob(r.chunks, { type: r.mr.mimeType || r.chunks[0]?.type || 'audio/webm' })
-  if (!blob.size) return toast(t('rec_failed'))
-  if (blob.size > VOICE_BYTES) return toast(t('voice_big'))
-  sendVoice(blob, r.dur / 1000, peaksOf(r.levels))
-}
-
-// Loudness over time, squeezed into a fixed number of bars (0–100). Sent along with the audio so
-// both sides draw the same waveform without decoding anything.
-function peaksOf(levels, n = 32) {
-  const max = Math.max(0, ...levels)
-  if (max < 0.004) return Array.from({ length: n }, (_, i) => 30 + Math.round(30 * Math.abs(Math.sin(i * 1.7))))
-  return Array.from({ length: n }, (_, i) => {
-    const a = Math.floor(i * levels.length / n), b = Math.max(a + 1, Math.floor((i + 1) * levels.length / n))
-    return Math.max(8, Math.round(100 * Math.max(...levels.slice(a, b)) / max))
-  })
-}
-
-async function sendVoice(blob, d, p) {
-  if (!G || G.ended || !G.them) return
-  const id = rid(), meta = { id, d: Math.round(d * 10) / 10, p, mime: blob.type }
-  addVoice('me', id, URL.createObjectURL(blob), meta)
-  if (H) hostCount(0, 'v')
-  vibrate(12)
-  try { await net.sendFile(new Uint8Array(await blob.arrayBuffer()), meta) } catch {}
-}
-
-function onVoice(data, meta) {
-  if (!G || G.ended || !meta || typeof meta.id !== 'string') return
-  G.heardAt = now()
-  const size = data?.byteLength ?? data?.size ?? 0
-  if (!size || size > VOICE_BYTES) return
-  const id = meta.id.slice(0, 12)
-  net.send({ t: 'ack', id })
-  if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
-  const mime = /^audio\/(webm|mp4|ogg|mpeg|aac)(;[\w=., -]{0,40})?$/.test(meta.mime || '') ? meta.mime : 'audio/webm'
-  const d = Math.max(0.5, Math.min(VOICE_MAX / 1000 + 1, +meta.d || 0))
-  const p = (Array.isArray(meta.p) ? meta.p : []).slice(0, 48).map(x => Math.max(0, Math.min(100, Math.round(+x || 0))))
-  addVoice('them', id, URL.createObjectURL(new Blob([data], { type: mime.split(';')[0] })), { d, p, mime })
-  hopThem()
-  if (H) hostCount(1, 'v')
-}
-
-function wave(peaks) {
-  return h('span', { class: 'vwave' }, peaks.map(p => { const i = h('i'); i.style.height = `${Math.round(4 + p * 0.2)}px`; return i }))
-}
-
-function addVoice(who, id, url, { d, p, mime }) {
-  G.urls.push(url)
-  G.voiceCount++
-  countStage('v')
-  const audio = new Audio()
-  audio.preload = 'auto'
-  audio.src = url
-  const btn = h('button', { class: 'vplay', type: 'button', 'aria-label': t('play') }, icon('play'))
-  const bars = wave(p.length ? p : peaksOf([]))
-  const time = h('span', { class: 'vtime' }, clock(Math.round(d) * 1000))
-  const progress = f => [...bars.children].forEach((b, i, all) => b.classList.toggle('on', i < Math.round(f * all.length)))
-  const stop = () => {
-    audio.pause()
-    try { audio.currentTime = 0 } catch {}
-    btn.replaceChildren(icon('play'))
-    progress(0)
-    time.textContent = clock(Math.round(d) * 1000)
-    if (playing?.audio === audio) playing = null
-  }
-  audio.addEventListener('timeupdate', () => {
-    if (playing?.audio !== audio) return
-    progress(Math.min(1, audio.currentTime / d))
-    time.textContent = clock(audio.currentTime * 1000)
-  })
-  audio.addEventListener('ended', stop)
-  btn.addEventListener('click', e => {
-    e.stopPropagation()
-    if (playing?.audio === audio) return stop()
-    playing?.stop()
-    if (mime && !audio.canPlayType(mime.split(';')[0])) return toast(t('voice_cant'))
-    playing = { audio, stop }
-    btn.replaceChildren(icon('pause'))
-    audio.play().catch(() => { stop(); toast(t('voice_cant')) })
-  })
-  addRow(who, id, h('div', { class: 'bubble voice', 'data-id': id }, btn, bars, time))
-}
-
-$('#micBtn').addEventListener('click', startRec)
-$('#recCancel').addEventListener('click', () => stopRec(false))
-$('#recSend').addEventListener('click', () => stopRec(true))
-
-// ---------------------------------------------------------------- video call (step 4)
-// Camera and microphone go straight to the other person. Nobody's camera turns on by itself,
-// and the stranger's video stays blurred until you tap it, again every time their camera comes on.
-
-const newVideo = () => ({ local: null, remote: null, mic: true, cam: true, them: { on: false, mic: true, cam: true }, revealed: false, saw: false, starting: false })
-
-async function startVideo() {
+// Join the call with the microphone, and with the camera too when cam is set (step 4 on).
+async function startCall(cam) {
   const v = G?.video
-  if (!v || G.ended || !allows('c') || v.local || v.starting) return
-  if (!navigator.mediaDevices?.getUserMedia) return toast(t('cam_none'))
-  v.starting = true
-  stopRec(false)
-  playing?.stop()
+  if (!v || G.ended || !allows('v') || v.local || v.busy) return
+  cam = !!cam && allows('c')
+  if (!navigator.mediaDevices?.getUserMedia) return toast(t(cam ? 'cam_none' : 'call_none'))
+  v.busy = true
   let stream
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
-      audio: { echoCancellation: true, noiseSuppression: true },
-    })
-  } catch (e) {
-    v.starting = false
-    return toast(t(e?.name === 'NotAllowedError' || e?.name === 'SecurityError' ? 'cam_denied' : 'cam_none'))
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO, video: cam && { ...CAM, facingMode: 'user' } }) }
+  catch (e) {
+    v.busy = false
+    return toast(t(denied(e) ? (cam ? 'cam_denied' : 'mic_denied') : (cam ? 'cam_none' : 'call_none')))
   }
-  v.starting = false
-  if (!G || G.ended || G.video !== v) return stream.getTracks().forEach(x => x.stop())
-  Object.assign(v, { local: stream, mic: true, cam: true })
+  v.busy = false
+  if (!G || G.ended || G.video !== v || !allows('v')) return stream.getTracks().forEach(x => x.stop())
+  Object.assign(v, { local: stream, mic: true, cam, facing: 'user' })
   net.addStream(stream)
   sendCam()
   renderVideo()
+  playRemote()
+  if (cam) countCams()
 }
 
-// Turn my camera and microphone off. peer: who to take the stream back from (the match may
-// already be over).
-function stopVideo(peer) {
+// Leave the call. peer: who to take the stream back from (the match may already be over).
+function stopCall(peer) {
   const v = G?.video
   if (!v?.local) return
   net.removeStream(v.local, peer)
   v.local.getTracks().forEach(x => x.stop())
   v.local = null
+  v.cam = false
   if (!G.ended) { sendCam(); renderVideo() }
 }
 
-function toggleTrack(which) {
+function toggleMic() {
   const v = G?.video
   if (!v?.local) return
-  v[which] = !v[which]
-  v.local.getTracks().filter(x => x.kind === (which === 'mic' ? 'audio' : 'video')).forEach(x => (x.enabled = v[which]))
+  v.mic = !v.mic
+  v.local.getAudioTracks().forEach(x => (x.enabled = v.mic))
   sendCam()
   renderVideo()
 }
 
-const sendCam = () => net.send({ t: 'cam', on: !!G.video.local, mic: G.video.mic, cam: G.video.cam })
+// Off only pauses the camera. On opens it and adds it to the call the first time (after a voice
+// call), or when the camera was lost.
+async function toggleCam() {
+  const v = G?.video
+  if (!v?.local || v.busy || !allows('c')) return
+  const old = camTrack()
+  if (old?.readyState === 'live') {
+    v.cam = old.enabled = !v.cam
+    sendCam()
+    return renderVideo()
+  }
+  v.busy = true
+  let track
+  try { track = await openCam({ ...CAM, facingMode: v.facing }) }
+  catch (e) { v.busy = false; return toast(t(denied(e) ? 'cam_denied' : 'cam_none')) }
+  v.busy = false
+  if (!G || G.ended || G.video !== v || !v.local || camTrack() !== old) return track.stop()
+  putCam(track, old, v.facing)
+  v.cam = true
+  sendCam()
+  renderVideo()
+  countCams()
+}
+
+// Front camera to back and back again. The camera in use is let go first, since many phones
+// can't have two open at once. Phones say which way each camera faces; computers usually don't,
+// and then the next camera in the list is used. If nothing else opens, the old one comes back.
+async function flipCam() {
+  const v = G?.video, old = camTrack()
+  if (!old || !v.cam || v.busy || old.readyState !== 'live') return
+  v.busy = true
+  renderVideo()
+  const want = v.facing === 'environment' ? 'user' : 'environment', oldId = old.getSettings?.().deviceId
+  old.stop()
+  let track = null, facing = want
+  try { track = await openCam({ ...CAM, facingMode: { exact: want } }) } catch {}
+  if (!track) {
+    try {
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput' && d.deviceId)
+      const next = cams[(cams.findIndex(d => d.deviceId === oldId) + 1) % cams.length]
+      if (next && next.deviceId !== oldId) track = await openCam({ ...CAM, deviceId: { exact: next.deviceId } })
+    } catch {}
+  }
+  if (!track) {
+    facing = v.facing
+    try { track = await openCam(oldId ? { ...CAM, deviceId: { exact: oldId } } : { ...CAM, facingMode: v.facing }) } catch {}
+  }
+  v.busy = false
+  if (!G || G.ended || G.video !== v || camTrack() !== old) return track?.stop()
+  if (!track) { v.cam = false; sendCam(); renderVideo(); return toast(t('cam_none')) }
+  putCam(track, old, facing)
+  renderVideo()
+}
+
+// Put a camera track into the call: in place of the one there (the stranger's picture just
+// carries on), or added when the call had none.
+function putCam(track, old, facing) {
+  const s = G.video.local
+  if (old) { s.removeTrack(old); old.stop() }
+  s.addTrack(track)
+  if (old) net.replaceTrack(old, track)
+  else net.addTrack(track, s)
+  G.video.facing = track.getSettings?.().facingMode || facing
+  $('#localVid').srcObject = null        // so my own picture picks up the new camera
+}
+
+// Whether there's another camera to switch to. Known only once the camera is allowed.
+async function countCams() {
+  const v = G?.video
+  try { v.cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput').length } catch {}
+  if (G?.video === v && !G.ended) renderVideo()
+}
+
+const sendCam = () => net.send({ t: 'cam', on: !!G.video.local, mic: G.video.mic, cam: !!(G.video.local && G.video.cam) })
 
 function onCam(m) {
   const v = G.video, was = v.them
-  v.them = { on: !!m.on, mic: m.mic !== false, cam: m.cam !== false }
+  v.them = { on: !!m.on, mic: m.mic !== false, cam: !!m.on && m.cam === true }
   if (!v.them.on) v.remote = null
   // Blurred again whenever their picture comes back, after a pause too.
-  if (v.them.on && v.them.cam && !(was.on && was.cam)) v.revealed = false
+  if (v.them.cam && !was.cam) v.revealed = false
+  // They started a call I'm not on yet.
+  if (v.them.on && !was.on && !v.local) { hopThem(); vibrate([20, 60, 20]) }
   renderVideo()
 }
 
 function onStream(stream) {
   if (!G || G.ended) return
   const v = G.video
-  if (!v.them.on) { v.them = { ...v.them, on: true }; v.revealed = false }
+  if (!v.them.on) v.them = { ...v.them, on: true }
   v.remote = stream
-  renderVideo()
+  // A camera turned on during a voice call arrives as a new track in the same stream.
+  stream.onaddtrack = stream.onremovetrack = reloadRemote
+  reloadRemote()
+}
+// Load their stream into the players again when its tracks have changed, so a camera added to it
+// shows. Switching between their front and back camera keeps the same track: nothing to reload.
+function reloadRemote() {
+  clearTimeout(reloadRemote.t)
+  reloadRemote.t = setTimeout(() => {
+    if (!G || G.ended) return
+    const rv = $('#remoteVid'), s = G.video.remote
+    const tracks = s ? s.getTracks().map(x => x.id).sort().join() : ''
+    if (rv.srcObject === s && rv.dataset.tracks === tracks) return
+    rv.dataset.tracks = tracks
+    rv.srcObject = $('#remoteBg').srcObject = null
+    renderVideo()
+  }, 30)
+}
+
+// Time we've both been on the call, for the end card, and whether we talked on the voice step.
+function tallyCall() {
+  const v = G.video, both = !!(v.local && v.them.on)
+  if (both && !v.since) v.since = now()
+  if (!both && v.since) { v.together += now() - v.since; v.since = 0 }
+  if (both && G.view.stage === VOICE) v.talked = true
+}
+const callTime = v => v.together + (v.since ? now() - v.since : 0)
+
+// The line under their face when there's no picture of them.
+function callStatus() {
+  const v = G.video
+  if (!v.them.on) return t('call_wait')
+  if (!v.local) return t('call_them')
+  if (allows('c')) return t('cam_off_them')
+  return t('call_live', { time: clock(now() - v.since) })
+}
+function tickCall() {
+  if (G && !G.ended && G.video.since && !$('#video').hidden && !$('#remoteOff').hidden) $('#remoteOffText').textContent = callStatus()
 }
 
 function renderVideo() {
   const v = G.video, box = $('#video')
-  const show = allows('c') && !!(v.local || v.them.on)
+  const show = allows('v') && !!(v.local || v.them.on)
   box.hidden = !show
-  $('#camBtn').classList.toggle('on', !!v.local)
-  renderSolo()
+  renderCallBtns()
   document.body.classList.toggle('in-call', show)
+  tallyCall()
   const rv = $('#remoteVid'), bg = $('#remoteBg'), lv = $('#localVid')
   if (!show) { rv.srcObject = bg.srcObject = lv.srcObject = null; return }
 
-  // Their whole picture is shown; a blurred, muted copy of it fills the space around it.
+  // Their whole picture is shown; a blurred, muted copy of it fills the space around it. Their
+  // sound plays only while I'm on the call too.
   const remote = v.them.on ? v.remote : null
+  rv.muted = !v.local
   for (const el of [rv, bg]) if (el.srcObject !== remote) { el.srcObject = remote; if (remote) el.play().catch(() => {}) }
-  const seeing = !!(remote && v.them.cam)
+  const seeing = !!(remote && v.them.cam && remote.getVideoTracks().length)
+  const mine = !!(v.local && v.cam && camTrack())
+  box.classList.toggle('audio', !seeing && !mine)         // nobody's camera is on: a smaller box
   box.classList.toggle('blurred', seeing && !v.revealed)
   $('#revealBtn').hidden = !seeing || v.revealed
   $('#remoteOff').hidden = seeing
   if (!seeing) {
     paintAva($('#remoteOff .ava'), themFace())
-    $('#remoteOffText').textContent = v.them.on ? t('cam_off_them') : t('video_wait')
+    $('#remoteOff').classList.toggle('live', !!(v.local && v.them.on && v.them.mic))
+    $('#remoteOffText').textContent = callStatus()
   }
   $('#themMuted').hidden = !(v.them.on && !v.them.mic)
 
-  $('#localTile').hidden = !v.local
-  if (v.local && lv.srcObject !== v.local) lv.srcObject = v.local
-  $('#localTile').classList.toggle('off', !v.cam)
+  // My own picture, unmirrored for the back camera.
+  $('#localTile').hidden = !mine
+  $('#localTile').classList.toggle('rear', v.facing === 'environment')
+  if (lv.srcObject !== (mine ? v.local : null)) lv.srcObject = mine ? v.local : null
   $('#vStart').hidden = !!v.local
-  for (const id of ['vMic', 'vCam', 'vEnd']) $('#' + id).hidden = !v.local
+  for (const id of ['vMic', 'vEnd']) $('#' + id).hidden = !v.local
+  $('#vCam').hidden = !v.local || !allows('c')
+  $('#vFlip').hidden = !mine || v.cams < 2
+  $('#vFlip').disabled = v.busy
   $('#vMic').classList.toggle('off', !v.mic)
-  $('#vMic').replaceChildren(icon(v.mic ? 's3' : 'micOff'))
+  $('#vMic').replaceChildren(icon(v.mic ? 'mic' : 'micOff'))
   $('#vCam').classList.toggle('off', !v.cam)
   $('#vCam').replaceChildren(icon(v.cam ? 's4' : 'camOff'))
 }
 
-$('#camBtn').addEventListener('click', () => (G?.video?.local ? stopVideo() : startVideo()))
-$('#vStart').addEventListener('click', startVideo)
-$('#vEnd').addEventListener('click', () => stopVideo())
-$('#vMic').addEventListener('click', () => toggleTrack('mic'))
-$('#vCam').addEventListener('click', () => toggleTrack('cam'))
+// What starts a call: the one big button on the voice-only and video-only steps, and on the last
+// step a phone and a camera button in the tray, put away while I'm on the call (the call's own
+// buttons take over).
+function renderCallBtns() {
+  const v = G.video, b = $('#soloBtn')
+  $('#micBtn').hidden = !allows('w') || !allows('v') || !!v.local
+  $('#camBtn').hidden = !allows('w') || !allows('c') || !!v.local
+  if (allows('w') || !allows('v')) return
+  const cam = allows('c'), on = cam ? !!(v.local && v.cam) : !!v.local
+  b.classList.toggle('on', on)
+  b.replaceChildren(icon(cam ? (on ? 'camOff' : 's4') : on ? 'hang' : 's3'),
+    h('span', {}, t(cam ? (on ? 'cam_stop' : 'cam_on') : on ? 'call_end' : v.them.on ? 'call_join' : 'call_start')))
+}
+$('#soloBtn').addEventListener('click', () => {
+  if (!G || allows('w') || !allows('v')) return
+  if (allows('c')) G.video.local ? toggleCam() : startCall(true)
+  else G.video.local ? stopCall() : startCall(false)
+})
+
+$('#micBtn').addEventListener('click', () => startCall(false))
+$('#camBtn').addEventListener('click', () => startCall(true))
+$('#vStart').addEventListener('click', () => startCall(false))
+$('#vEnd').addEventListener('click', () => stopCall())
+$('#vMic').addEventListener('click', toggleMic)
+$('#vCam').addEventListener('click', toggleCam)
+$('#vFlip').addEventListener('click', flipCam)
 $('#revealBtn').addEventListener('click', () => {
   if (!G) return
   G.video.revealed = G.video.saw = true
@@ -1629,7 +1611,7 @@ function renderPostcard(why) {
       h('span', { class: 'lv-ico' }, icon('s' + G.maxStage)),
       h('div', {}, h('p', { class: 'pc-kicker' }, t('reached')), h('p', { class: 'pc-stage-name' }, t('s' + G.maxStage)))),
     h('div', { class: 'pc-stats' },
-      stat(mmss(dur), t('stat_time')), stat(G.gifCount, t('stat_gifs')), stat(G.textCount, t('stat_texts')), stat(G.voiceCount, t('stat_voice'))),
+      stat(mmss(dur), t('stat_time')), stat(G.gifCount, t('stat_gifs')), stat(G.textCount, t('stat_texts')), stat(clock(callTime(G.video)), t('stat_call'))),
     G.gifs.length > 0 && h('div', { class: 'pc-story' }, h('p', { class: 'pc-kicker' }, t('story')),
       h('div', { class: 'pc-gifs' }, G.gifs.map(src => h('img', { src, alt: '', referrerpolicy: 'no-referrer' })))),
   ].filter(Boolean))
