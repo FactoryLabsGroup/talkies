@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=19'
-import { STR, LANGS } from './i18n.js?v=19'
-import { Net } from './net.js?v=19'
+import { CONFIG } from './config.js?v=20'
+import { STR, LANGS } from './i18n.js?v=20'
+import { Net } from './net.js?v=20'
 
 // Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
 // call only, and finally everything at once plus swapping contacts. A step opens once enough time
@@ -541,6 +541,9 @@ document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', 
   startSearch()
 }))
 addEventListener('pagehide', () => { if (G && !G.ended) net.send({ t: 'bye' }) })
+// Back from the browser's back-forward cache: the connections were closed on the way out, so
+// start fresh rather than show a chat that can no longer reach anyone.
+addEventListener('pageshow', e => { if (e.persisted) location.reload() })
 
 // ---------------------------------------------------------------- leaving by accident
 // Leaving ends the chat for both of you, so the logo, the phone's back button and closing the
