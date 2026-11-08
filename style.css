@@ -489,23 +489,18 @@ body.text-open .gif-panel .gif-grid { height: 168px; }
 .mic-btn:hover { color: var(--text); }
 .mic-btn .ico { width: 16px; height: 16px; }
 .mic-btn[hidden] { display: none; }
-.rec { gap: 10px; border-color: color-mix(in srgb, var(--danger) 50%, transparent); animation: in .18s var(--ease); }
-.rec[hidden] { display: none; }
-.rec-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); animation: blink 1s infinite; }
-.rec-time { flex: none; min-width: 36px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.rec-wave { flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; overflow: hidden; }
-.rec-wave i { flex: none; width: 3px; border-radius: 2px; background: var(--text-2); }
 
 .bubble.voice { flex-wrap: nowrap; gap: 10px; min-width: 210px; padding: 7px 14px 7px 7px; }
 .vplay { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--text); transition: transform .12s var(--ease); }
-.vplay:active { transform: scale(.92); }
 .vplay .ico { width: 14px; height: 14px; }
 .row.me .vplay { background: rgba(255, 255, 255, .2); color: #fff; }
 .vwave { flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; gap: 2px; overflow: hidden; }
-.vwave i { flex: none; width: 3px; border-radius: 2px; background: currentColor; opacity: .4; transition: opacity .1s; }
-.vwave i.on { opacity: 1; }
+.vwave i { flex: none; width: 3px; border-radius: 2px; background: currentColor; opacity: .4; }
 .vtime { flex: none; font-size: 12px; font-variant-numeric: tabular-nums; opacity: .8; }
-.bubble.voice.sent::after { margin: 0 -6px -3px -4px; }
+/* The landing demo's voice call: green phone, bars bouncing as if someone's talking */
+.bubble.call .vplay { color: #fff; background: var(--success); }
+.bubble.call .vwave i { opacity: .7; animation: talk 1.1s ease-in-out infinite; }
+@keyframes talk { 0%, 100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
 
 .swap { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--accent-soft); border: 1px solid var(--accent-ring); animation: pop .3s var(--ease); }
 .swap[hidden] { display: none; }
@@ -528,17 +523,22 @@ body.text-open .gif-panel .gif-grid { height: 168px; }
 .swap-line .copy { flex: none; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: var(--text); background: var(--surface-3); border: 1px solid var(--border-2); }
 .demo .bubble.voice { min-width: 190px; }
 
-/* ---------- video call */
+/* ---------- calls: voice, and video once a camera is on */
 .video { position: relative; flex: none; height: min(40vh, 440px); margin: 14px 24px 0; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--border); animation: pop .3s var(--ease); }
 .video[hidden] { display: none; }
+.video.audio { height: min(30vh, 260px); }   /* nobody's camera is on */
 /* The whole picture in the middle; a blurred copy of it fills the rest of the box. */
 .v-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(28px) brightness(.5) saturate(1.2); transform: scale(1.2); pointer-events: none; }
 .v-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: filter .35s var(--ease), transform .35s var(--ease); }
 .video.blurred .v-remote { filter: blur(38px) saturate(.7); transform: scale(1.25); }
 .video.blurred .v-bg { filter: blur(44px) brightness(.4); }
-.v-off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center; font-size: 14px; color: var(--text-2); background: var(--bg-2); }
+.v-off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px 16px 68px; text-align: center; font-size: 14px; color: var(--text-2); background: var(--bg-2); }
 .v-off[hidden] { display: none; }
 .v-off .ava { width: 72px; height: 72px; }
+.v-off p { font-variant-numeric: tabular-nums; }
+/* Both on the call: their face pulses softly, like someone on the line */
+.v-off.live .ava { animation: onLine 1.8s ease-out infinite; }
+@keyframes onLine { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--glow, var(--accent)) 55%, transparent); } 80%, 100% { box-shadow: 0 0 0 16px transparent; } }
 .v-reveal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff; background: rgba(9, 9, 11, .6); border: 1px solid rgba(255, 255, 255, .22); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .v-reveal[hidden] { display: none; }
 .v-reveal .ico { width: 18px; height: 18px; }
@@ -549,10 +549,11 @@ body.text-open .gif-panel .gif-grid { height: 168px; }
 .v-local[hidden] { display: none; }
 .v-local.tall { width: 96px; }
 .v-local video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-.v-local.off video { opacity: 0; }
+.v-local.rear video { transform: none; }   /* the back camera isn't a mirror */
 .v-bar { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 10px; pointer-events: none; }
 .v-btn { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(9, 9, 11, .55); border: 1px solid rgba(255, 255, 255, .2); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: background .15s, transform .12s var(--ease); }
 .v-btn:active { transform: scale(.94); }
+.v-btn:disabled { opacity: .5; }
 .v-btn[hidden] { display: none; }
 .v-btn .ico { width: 19px; height: 19px; }
 .v-btn.off { color: #111; background: #fff; }
@@ -735,6 +736,7 @@ html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
   .swap-head p { font-size: 13px; }
   .swap-in, .swap-form .btn { height: 40px; }
   .video { height: calc(var(--vh, 100vh) * .34); }
+  .video.audio { height: calc(var(--vh, 100vh) * .27); }
   /* While typing, only what the typing needs: the steps row and the contact box (unless that's
      where you type) step aside, and the video shrinks. */
   body.kb .track-row, body.kb[data-focus="textIn"] #swap { display: none; }
