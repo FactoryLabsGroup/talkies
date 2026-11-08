@@ -1,10 +1,10 @@
-import { CONFIG } from './config.js?v=15'
-import { STR, LANGS } from './i18n.js?v=15'
-import { Net } from './net.js?v=15'
+import { CONFIG } from './config.js?v=16'
+import { STR, LANGS } from './i18n.js?v=16'
+import { Net } from './net.js?v=16'
 
-// Talkies: two strangers climb four steps: GIFs only, then words, then voice messages, then
-// swapping contacts. A step opens once enough time has passed and both have sent enough of the
-// current kind of message, and only if both agree.
+// Talkies: two strangers climb five steps: GIFs only, then words, voice messages, a video call,
+// and finally swapping contacts. A step opens once enough time has passed and both have sent
+// enough of the current kind of message, and only if both agree.
 
 // ---------------------------------------------------------------- content
 
@@ -15,8 +15,10 @@ const STAGES = [null,
   { kind: 'g', need: FAST ? 1 : 3, time: FAST ? 10000 : 60000 },
   { kind: 'w', need: FAST ? 1 : 5, time: FAST ? 10000 : 90000 },
   { kind: 'v', need: 1, time: FAST ? 10000 : 45000 },
+  { kind: '', need: 0, time: FAST ? 10000 : 60000 },   // video: the camera is optional, only time counts
   { last: true },
 ]
+const VIDEO = 4
 const LAST = STAGES.length - 1
 const TEXT_MAX = 300
 const VOICE_MAX = 30000          // longest voice message, ms
@@ -63,7 +65,12 @@ const ICONS = {
   s1: SVG('<rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.2" text-anchor="middle" font-size="7.2" font-weight="800" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">GIF</text>', 1.6),
   s2: SVG('<path d="M20 15.5a2 2 0 0 1-2 2H8l-4 3.5V5.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>'),
   s3: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>'),
-  s4: SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>'),
+  s4: SVG('<rect x="2.5" y="6" width="13" height="12" rx="3"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/>'),
+  camOff: SVG('<rect x="2.5" y="6" width="13" height="12" rx="3"/><path d="m15.5 10.5 6-3.5v10l-6-3.5z"/><path d="M2 3l20 18"/>'),
+  micOff: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M3 3l18 18"/>'),
+  hang: SVG('<path d="M3 15.5c4.9-4.7 13.1-4.7 18 0l-2.3 2.5-3.4-1.5.1-2.6a11 11 0 0 0-6.8 0l.1 2.6-3.4 1.5z"/>'),
+  eye: SVG('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+  s5: SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>'),
   play: SVG('<path d="M7.5 4.8v14.4L19 12z" fill="currentColor"/>'),
   pause: SVG('<path d="M8.5 5v14M15.5 5v14"/>', 3),
   x: SVG('<path d="M18 6 6 18M6 6l12 12"/>'),
@@ -320,6 +327,7 @@ const net = new Net({
   onMatch: (partner, isHost) => startMatch(partner, isHost),
   onGame: msg => onGame(msg),
   onVoice: (data, meta) => onVoice(data, meta),
+  onStream: stream => onStream(stream),
   onPartnerGone: () => endMatch('left'),
 })
 net.start()
@@ -413,6 +421,7 @@ function startMatch(partner, isHost) {
     gifs: [], gifCount: 0, textCount: 0, voiceCount: 0, stageCnt: STAGES.map(() => 0),
     lastSend: 0, timers: [], gifOpen: true, urls: [],
     swap: { mine: '', theyReady: false, sentMine: false, theirs: '', done: false },
+    video: newVideo(),
   }
   H = isHost ? { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0], last: now(), lastPush: 0 } : null
 
@@ -443,7 +452,11 @@ function clearMatchTimers() {
   cancelAnimationFrame(G.raf)
   stopRec(false)
   playing?.stop()
+  stopVideo(G.partner)
   G.urls.forEach(u => URL.revokeObjectURL(u))
+  $('#remoteVid').srcObject = $('#localVid').srcObject = null
+  $('#video').hidden = true
+  document.body.classList.remove('in-call')
 }
 
 // Connection never came up: quietly go back to searching.
@@ -518,6 +531,7 @@ function onGame(m) {
     case 'ok': if (H && m.s === H.stage) hostConsent(1); break
     case 'cx': swapReady(); break
     case 'ch': swapContact(m.v); break
+    case 'cam': onCam(m); break
     case 'bye': endMatch('left'); break
   }
 }
@@ -584,6 +598,7 @@ function applyState(s) {
     if (stage > prev.stage) {
       G.maxStage = Math.max(G.maxStage, stage)
       if (stage === 2) G.gifOpen = false
+      if (stage === VIDEO) pushFeed(h('div', { class: 'feed-note' }, icon('s4'), h('span', {}, t('video_note'))))
       levelUpFx(stage)
     }
     return renderAll()
@@ -597,6 +612,7 @@ function renderAll() {
   renderNeed()
   renderConsent()
   renderComposer()
+  renderVideo()
 }
 
 function renderThem() {
@@ -625,7 +641,8 @@ function renderLadder() {
   $('#ladder').replaceChildren(...STAGES.slice(1).map((st, j) => {
     const i = j + 1
     const state = i < v.stage ? 'done' : i === v.stage ? 'now' : 'locked'
-    const desc = state === 'done' ? tn('done_' + i, G.stageCnt[i]) : state === 'locked' ? t('u' + i)
+    const desc = state === 'done' ? (i === VIDEO ? t(G.video.saw ? 'done_4' : 'done_4_none') : tn('done_' + i, G.stageCnt[i]))
+      : state === 'locked' ? t('u' + i)
       : st.last && G.swap.done ? t('swapped') : t('d' + i)
     return h('li', { class: `step-row ${state}` },
       h('span', { class: 'dot' }, icon(state === 'done' ? 'check' : state === 'locked' ? 'lock' : 's' + i)),
@@ -643,7 +660,7 @@ function needCard() {
   const row = (who, n) => h('div', { class: `need-row${n >= st.need ? ' done' : ''}` }, h('span', {}, who), dots(n, st.need))
   return h('div', { class: 'need-card' },
     h('p', { class: 'need-title' }, tn('need_' + v.stage, st.need)),
-    row(t('you'), mineCnt()), row(t('stranger'), theirCnt()),
+    st.need > 0 && row(t('you'), mineCnt()), st.need > 0 && row(t('stranger'), theirCnt()),
     h('div', { class: 'need-bar' }, h('i', { id: 'needFill' })),
     h('div', { class: 'need-row' }, h('span', {}, t('time')), h('span', { id: 'needTime', class: 'need-time' })))
 }
@@ -663,7 +680,7 @@ function drawProgress() {
   const mine = mineCnt()
   const hint = st.last ? (G.swap.done ? t('swapped') : t('d' + v.stage)) : v.ac ? t('ready_' + v.stage)
     : left > 0 ? t('in_' + v.stage, { time: mmss(left) })
-    : mine < st.need ? tn('more_' + v.stage, st.need - mine) : t('wait_' + v.stage)
+    : mine < st.need ? tn('more_' + v.stage, st.need - mine) : st.need ? t('wait_' + v.stage) : t('ready_' + v.stage)
   if ($('#meterText').textContent !== hint) $('#meterText').textContent = hint
   $('#match').classList.toggle('ready', v.ac || !!st.last)
   G.raf = requestAnimationFrame(drawProgress)
@@ -672,7 +689,7 @@ function drawProgress() {
 // The same counts as small pills in the header, for phones where the sidebar is hidden.
 function renderNeed() {
   const v = G.view, st = STAGES[v.stage], el = $('#gifNeed')
-  el.hidden = !!st.last || v.ac
+  el.hidden = !!st.last || v.ac || !st.need
   if (el.hidden) return
   const group = (who, n) => h('span', { class: `need${n >= st.need ? ' done' : ''}` }, h('span', { class: 'need-who' }, who), dots(n, st.need))
   el.replaceChildren(group(t('you'), mineCnt()), group(t('stranger'), theirCnt()))
@@ -747,6 +764,7 @@ function renderComposer() {
   $('#tray').hidden = !textOpen || !!rec
   $('#rec').hidden = !rec
   $('#micBtn').hidden = G.view.stage < 3
+  $('#camBtn').hidden = G.view.stage < VIDEO
   $('#gifPanel').hidden = textOpen && !G.gifOpen
   $('#gifBtn').classList.toggle('on', G.gifOpen && textOpen)
   $('#gifBtn').setAttribute('aria-expanded', String(G.gifOpen && textOpen))
@@ -846,7 +864,7 @@ function stopRec(send) {
 function finishRec(r) {
   if (!r.send || !G || G.ended || r.dur < 600) return
   const blob = new Blob(r.chunks, { type: r.mr.mimeType || r.chunks[0]?.type || 'audio/webm' })
-  if (!blob.size) return
+  if (!blob.size) return toast(t('rec_failed'))
   if (blob.size > VOICE_BYTES) return toast(t('voice_big'))
   sendVoice(blob, r.dur / 1000, peaksOf(r.levels))
 }
@@ -931,6 +949,124 @@ $('#micBtn').addEventListener('click', startRec)
 $('#recCancel').addEventListener('click', () => stopRec(false))
 $('#recSend').addEventListener('click', () => stopRec(true))
 
+// ---------------------------------------------------------------- video call (step 4)
+// Camera and microphone go straight to the other person. Nobody's camera turns on by itself,
+// and the stranger's video stays blurred until you tap it, again every time their camera comes on.
+
+const newVideo = () => ({ local: null, remote: null, mic: true, cam: true, them: { on: false, mic: true, cam: true }, revealed: false, saw: false, starting: false })
+
+async function startVideo() {
+  const v = G?.video
+  if (!v || G.ended || G.view.stage < VIDEO || v.local || v.starting) return
+  if (!navigator.mediaDevices?.getUserMedia) return toast(t('cam_none'))
+  v.starting = true
+  stopRec(false)
+  playing?.stop()
+  let stream
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
+      audio: { echoCancellation: true, noiseSuppression: true },
+    })
+  } catch (e) {
+    v.starting = false
+    return toast(t(e?.name === 'NotAllowedError' || e?.name === 'SecurityError' ? 'cam_denied' : 'cam_none'))
+  }
+  v.starting = false
+  if (!G || G.ended || G.video !== v) return stream.getTracks().forEach(x => x.stop())
+  Object.assign(v, { local: stream, mic: true, cam: true })
+  net.addStream(stream)
+  sendCam()
+  renderVideo()
+}
+
+// Turn my camera and microphone off. peer: who to take the stream back from (the match may
+// already be over).
+function stopVideo(peer) {
+  const v = G?.video
+  if (!v?.local) return
+  net.removeStream(v.local, peer)
+  v.local.getTracks().forEach(x => x.stop())
+  v.local = null
+  if (!G.ended) { sendCam(); renderVideo() }
+}
+
+function toggleTrack(which) {
+  const v = G?.video
+  if (!v?.local) return
+  v[which] = !v[which]
+  v.local.getTracks().filter(x => x.kind === (which === 'mic' ? 'audio' : 'video')).forEach(x => (x.enabled = v[which]))
+  sendCam()
+  renderVideo()
+}
+
+const sendCam = () => net.send({ t: 'cam', on: !!G.video.local, mic: G.video.mic, cam: G.video.cam })
+
+function onCam(m) {
+  const v = G.video, was = v.them
+  v.them = { on: !!m.on, mic: m.mic !== false, cam: m.cam !== false }
+  if (!v.them.on) v.remote = null
+  // Blurred again whenever their picture comes back, after a pause too.
+  if (v.them.on && v.them.cam && !(was.on && was.cam)) v.revealed = false
+  renderVideo()
+}
+
+function onStream(stream) {
+  if (!G || G.ended) return
+  const v = G.video
+  if (!v.them.on) { v.them = { ...v.them, on: true }; v.revealed = false }
+  v.remote = stream
+  renderVideo()
+}
+
+function renderVideo() {
+  const v = G.video, box = $('#video')
+  const show = G.view.stage >= VIDEO && !!(v.local || v.them.on)
+  box.hidden = !show
+  $('#camBtn').hidden = G.view.stage < VIDEO
+  $('#camBtn').classList.toggle('on', !!v.local)
+  document.body.classList.toggle('in-call', show)
+  const rv = $('#remoteVid'), lv = $('#localVid')
+  if (!show) { rv.srcObject = lv.srcObject = null; return }
+
+  const remote = v.them.on ? v.remote : null
+  if (rv.srcObject !== remote) { rv.srcObject = remote; if (remote) rv.play().catch(() => {}) }
+  const seeing = !!(remote && v.them.cam)
+  box.classList.toggle('blurred', seeing && !v.revealed)
+  $('#revealBtn').hidden = !seeing || v.revealed
+  $('#remoteOff').hidden = seeing
+  if (!seeing) {
+    paintAva($('#remoteOff .ava'), themSeed())
+    $('#remoteOffText').textContent = v.them.on ? t('cam_off_them') : t('video_wait')
+  }
+  $('#themMuted').hidden = !(v.them.on && !v.them.mic)
+
+  $('#localTile').hidden = !v.local
+  if (v.local && lv.srcObject !== v.local) lv.srcObject = v.local
+  $('#localTile').classList.toggle('off', !v.cam)
+  $('#vStart').hidden = !!v.local
+  for (const id of ['vMic', 'vCam', 'vEnd']) $('#' + id).hidden = !v.local
+  $('#vMic').classList.toggle('off', !v.mic)
+  $('#vMic').replaceChildren(icon(v.mic ? 's3' : 'micOff'))
+  $('#vCam').classList.toggle('off', !v.cam)
+  $('#vCam').replaceChildren(icon(v.cam ? 's4' : 'camOff'))
+}
+
+$('#camBtn').addEventListener('click', () => (G?.video?.local ? stopVideo() : startVideo()))
+$('#vStart').addEventListener('click', startVideo)
+$('#vEnd').addEventListener('click', () => stopVideo())
+$('#vMic').addEventListener('click', () => toggleTrack('mic'))
+$('#vCam').addEventListener('click', () => toggleTrack('cam'))
+$('#revealBtn').addEventListener('click', () => {
+  if (!G) return
+  G.video.revealed = G.video.saw = true
+  $('#remoteVid').play().catch(() => {})
+  renderVideo()
+  renderLadder()
+})
+// Some browsers only play sound after a tap on the page.
+$('#video').addEventListener('click', () => { const rv = $('#remoteVid'); if (rv.srcObject && rv.paused) rv.play().catch(() => {}) })
+
 // ---------------------------------------------------------------- contact swap
 // Each side types a contact and at first only says "ready" ('cx'). A contact ('ch') is sent
 // only once both have said ready, so nobody gives theirs away without getting one back.
@@ -944,7 +1080,7 @@ function renderSwap() {
     const typed = $('#swapIn')?.value || ''
     box.dataset.lang = lang
     box.replaceChildren(...[
-      h('div', { class: 'swap-head' }, h('span', { class: 'consent-ico' }, icon('s4')),
+      h('div', { class: 'swap-head' }, h('span', { class: 'consent-ico' }, icon('s' + LAST)),
         h('div', {}, h('p', {}, t('swap_title')), h('p', { class: 'swap-status' }))),
       !s.mine && h('form', { class: 'swap-form', onsubmit: e => { e.preventDefault(); submitSwap() } },
         h('input', { class: 'swap-in', id: 'swapIn', type: 'text', maxlength: CONTACT_MAX, autocomplete: 'off', enterkeyhint: 'send', placeholder: t('swap_ph'), 'aria-label': t('swap_title') }),
@@ -996,7 +1132,7 @@ function checkReveal() {
   const line = (seed, who, v, copy) => h('div', { class: 'swap-line' }, ava(seed), h('span', { class: 'who' }, who), h('b', {}, v),
     copy && h('button', { class: 'copy', type: 'button', onclick: e => copyText(v, e.currentTarget) }, t('copy')))
   pushFeed(h('div', { class: 'swap-card' },
-    h('p', { class: 'swap-card-title' }, icon('s4'), t('swapped')),
+    h('p', { class: 'swap-card-title' }, icon('s' + LAST), t('swapped')),
     line(themSeed(), t('stranger'), s.theirs, true), line(mySeed, t('you'), s.mine)))
   renderSwap()
   renderLadder()

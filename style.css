@@ -101,7 +101,7 @@ body[data-screen="landing"] .glow { opacity: 1; }
 .demo-avas { display: flex; }
 .demo-avas .ava { width: 28px; height: 28px; box-shadow: 0 0 0 2px var(--surface); }
 .demo-avas .ava + .ava { margin-left: -8px; }
-.demo-bar { display: grid; grid-template-columns: repeat(4, 26px); gap: 4px; }
+.demo-bar { display: grid; grid-template-columns: repeat(5, 22px); gap: 4px; }
 .demo-bar i { height: 4px; border-radius: 999px; background: var(--surface-3); position: relative; overflow: hidden; }
 .demo-bar i::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(0); transition: transform .6s var(--ease); }
 .demo-bar i.on::after { transform: scaleX(1); }
@@ -511,6 +511,37 @@ body.text-open .gif-panel .gif-grid { height: 168px; }
 .swap-line .copy { flex: none; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: var(--text); background: var(--surface-3); border: 1px solid var(--border-2); }
 .demo .bubble.voice { min-width: 190px; }
 
+/* ---------- video call */
+.video { position: relative; flex: none; height: min(40vh, 440px); margin: 14px 24px 0; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid var(--border); animation: pop .3s var(--ease); }
+.video[hidden] { display: none; }
+.v-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; transition: filter .35s var(--ease), transform .35s var(--ease); }
+.video.blurred .v-remote { filter: blur(38px) saturate(.7); transform: scale(1.25); }
+.v-off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center; font-size: 14px; color: var(--text-2); background: var(--bg-2); }
+.v-off[hidden] { display: none; }
+.v-off .ava { width: 72px; height: 72px; }
+.v-reveal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff; background: rgba(9, 9, 11, .6); border: 1px solid rgba(255, 255, 255, .22); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.v-reveal[hidden] { display: none; }
+.v-reveal .ico { width: 18px; height: 18px; }
+.v-muted { position: absolute; left: 12px; top: 12px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(9, 9, 11, .6); }
+.v-muted[hidden] { display: none; }
+.v-muted .ico { width: 15px; height: 15px; }
+.v-local { position: absolute; right: 12px; top: 12px; width: 116px; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; background: #111; border: 1px solid rgba(255, 255, 255, .2); box-shadow: var(--shadow-sm); }
+.v-local[hidden] { display: none; }
+.v-local video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.v-local.off video { opacity: 0; }
+.v-bar { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 10px; pointer-events: none; }
+.v-btn { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(9, 9, 11, .55); border: 1px solid rgba(255, 255, 255, .2); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: background .15s, transform .12s var(--ease); }
+.v-btn:active { transform: scale(.94); }
+.v-btn[hidden] { display: none; }
+.v-btn .ico { width: 19px; height: 19px; }
+.v-btn.off { color: #111; background: #fff; }
+.v-btn.end { background: var(--danger); border-color: transparent; }
+.v-btn.start { width: auto; display: inline-flex; align-items: center; gap: 8px; padding: 0 18px; border-radius: 999px; font-size: 14px; font-weight: 600; background: var(--accent); border-color: transparent; }
+#camBtn.on { color: #fff; background: var(--danger); border-color: transparent; }
+.feed-note { align-self: center; display: flex; align-items: center; gap: 10px; max-width: 480px; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); animation: in .3s var(--ease); }
+.feed-note .ico { flex: none; width: 18px; height: 18px; color: var(--accent); }
+.age { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+
 /* ---------- Georgian: no letter case (uppercase would turn into Mtavruli), calmer tracking */
 html[lang="ka"] * { text-transform: none !important; }
 html[lang="ka"] .headline { font-size: clamp(30px, 3.3vw, 48px); letter-spacing: -.01em; line-height: 1.18; }
@@ -568,6 +599,9 @@ html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
   .bubble.voice { min-width: 0; width: 240px; max-width: 82%; }
   .swap-form .btn { padding: 0 12px; }
   .pc-stats .stat b { font-size: 19px; }
+  .video { margin: 8px 12px 0; height: 36vh; border-radius: 14px; }
+  .v-local { width: 84px; right: 10px; top: 10px; }
+  .age { margin-top: 4px; }
 }
 @media (max-width: 380px) {
   .tab .ico { display: none; }

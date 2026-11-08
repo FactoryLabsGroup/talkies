@@ -3,10 +3,11 @@
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
 // Private invites skip the lobby: both people join a room named after a secret code from the
 // link, and whoever shows up there first becomes the partner. Voice messages go through their
-// own action, as binary data with a small metadata object.
+// own action, as binary data with a small metadata object. A video call adds a camera stream to
+// the room the partner is in.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=15'
+import { CONFIG } from './config.js?v=16'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
@@ -17,7 +18,7 @@ const nonce = () => Math.random().toString(36).slice(2, 10)
 
 export class Net {
   constructor(handlers) {
-    this.h = handlers          // { onCount(n), onMatch(partnerId, isHost), onGame(msg), onVoice(data, meta), onPartnerGone() }
+    this.h = handlers          // { onCount(n), onMatch(partnerId, isHost), onGame(msg), onVoice(data, meta), onStream(stream), onPartnerGone() }
     this.id = selfId
     this.status = 'idle'
     this.peers = new Map()     // peerId → status
@@ -30,6 +31,7 @@ export class Net {
     this.priv = null           // private invite room { room, g }
     this.game = null           // the action game messages go through (lobby or private)
     this.voice = null          // and the one voice messages go through
+    this.media = null          // the room camera streams go through
   }
 
   start() {
@@ -42,6 +44,8 @@ export class Net {
     this.mm = this.room.makeAction('mm')
     this.g = this.game = this.room.makeAction('g')
     this.v = this.voice = this.room.makeAction('v')
+    this.media = this.room
+    this.room.onPeerStream = (stream, peerId) => this.receiveStream(stream, peerId, this.room)
 
     this.room.onPeerJoin = id => {
       this.peers.set(id, 'idle')
@@ -70,6 +74,10 @@ export class Net {
     if (peerId === this.partner && via === this.voice) this.h.onVoice?.(data, meta)
   }
 
+  receiveStream(stream, peerId, room) {
+    if (peerId === this.partner && room === this.media) this.h.onStream?.(stream)
+  }
+
   receive(m, peerId, via) {
     const mine = peerId === this.partner && via === this.game
     this.h.onDebug?.('←', m, mine, peerId)
@@ -84,7 +92,8 @@ export class Net {
     const g = room.makeAction('g'), v = room.makeAction('v')
     g.onMessage = (m, { peerId }) => this.receive(m, peerId, g)
     v.onMessage = (d, { peerId, metadata }) => this.receiveVoice(d, metadata, peerId, v)
-    room.onPeerJoin = id => { if (!this.partner && this.priv?.room === room) this.begin(id, g, v) }
+    room.onPeerStream = (stream, peerId) => this.receiveStream(stream, peerId, room)
+    room.onPeerJoin = id => { if (!this.partner && this.priv?.room === room) this.begin(id, g, v, room) }
     room.onPeerLeave = id => {
       if (id === this.partner && this.game === g) { this.partner = null; this.h.onPartnerGone() }
     }
@@ -162,12 +171,13 @@ export class Net {
     }
   }
 
-  begin(partner, via = this.g, voice = this.v) {
+  begin(partner, via = this.g, voice = this.v, media = this.room) {
     clearInterval(this.timer)
     this.pending = this.reserved = null
     this.partner = partner
     this.game = via
     this.voice = voice
+    this.media = media
     this.recent.add(partner)
     this.setStatus('busy')
     this.h.onMatch(partner, this.id < partner)
@@ -182,10 +192,20 @@ export class Net {
     if (this.partner) return this.voice.send(data, { target: this.partner, metadata: meta })
   }
 
+  addStream(stream) {
+    if (this.partner) Promise.resolve(this.media.addStream(stream, { target: this.partner })).catch(() => {})
+  }
+
+  removeStream(stream, peer = this.partner) {
+    if (!peer) return
+    try { Promise.resolve(this.media.removeStream(stream, { target: peer })).catch(() => {}) } catch {}
+  }
+
   endMatch() {
     this.partner = null
     this.game = this.g
     this.voice = this.v
+    this.media = this.room
     this.closePrivate()
     this.setStatus('idle')
   }
