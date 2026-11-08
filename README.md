@@ -10,7 +10,9 @@ Two random strangers climb five steps, and each step needs both of them to agree
 4. **Face to face:** video call only. Nobody's camera turns on by itself, and the other person's video stays blurred until you tap it, again every time their camera comes back. After a minute they can swap contacts, with or without video.
 5. **Introduced:** everything is open again, and each can type a contact (Instagram, Telegram…). Nothing is sent until both have entered theirs, then both appear at the same time.
 
-Players don't see the timers or the steps ahead: the sidebar lists only the steps reached so far, and the consent bar names the next step once it can be opened.
+Players don't see the timers or the steps ahead: the sidebar (a row of circles on phones) lists only the steps reached so far plus a "?" that starts moving when the next one is close, and the consent bar names the next step once it can be opened.
+
+Photos can be sent with the button, pasted, or dropped onto the chat. Leaving a chat by the logo, the back button or closing the tab asks first; "Next stranger" doesn't.
 
 The numbers live in `STAGES` at the top of `app.js`.
 

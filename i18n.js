@@ -44,11 +44,15 @@ export const STR = {
     done_3: '{n} voice messages', done_3_one: '1 voice message',
     done_4: 'You saw each other', done_4_none: 'Without video',
     // Consent bar above the composer
-    ask_1: 'Switch to text? You both have to agree',
-    ask_2: 'Turn on voice messages? You both have to agree',
-    ask_3: 'Turn on video? You both have to agree',
-    ask_4: 'Swap contacts? You both have to agree',
+    ask_1: 'Switch to text?',
+    ask_2: 'Turn on voice messages?',
+    ask_3: 'Turn on video?',
+    ask_4: 'Swap contacts?',
     them_1: 'They want to switch to text', them_2: 'They want to turn on voice messages', them_3: 'They want to turn on video', them_4: 'They want to swap contacts',
+    // The "?" step after the current one in the ladder (what it is stays hidden)
+    next_step: 'Next step',
+    next_locked: 'Still locked', next_soon: 'Opening soon…', next_ready: 'Ready to open',
+    consent_both: 'You both have to agree',                // under the question in the consent bar
     consent_btn: 'I’m in',
     consent_wait: 'You’re in. Waiting for them…',
     unlocked: 'Unlocked',                                  // level-up overlay
@@ -80,6 +84,12 @@ export const STR = {
     mute: 'Microphone', cam_toggle: 'Camera', hang_up: 'End video', // call controls (screen readers)
     cam_denied: 'Camera access is off. Turn it on in your browser settings',
     cam_none: 'Video calls don’t work in this browser',
+
+    // Leaving a chat by the logo or the back button
+    leave_title: 'End this chat?',
+    leave_sub: 'The stranger will be disconnected, and you can’t come back to this chat.',
+    leave_stay: 'Stay',
+    leave_go: 'End chat',
 
     // Photos in the chat
     photo_btn: 'Send a photo',                             // photo button in the composer (screen readers)
@@ -157,11 +167,14 @@ export const STR = {
     done_2: '{n} შეტყობინება',
     done_3: '{n} ხმოვანი',
     done_4: 'ერთმანეთი დაინახეთ', done_4_none: 'ვიდეოს გარეშე',
-    ask_1: 'გადავიდეთ ტექსტზე? საჭიროა ორივეს თანხმობა',
-    ask_2: 'ჩავრთოთ ხმოვანი შეტყობინებები? საჭიროა ორივეს თანხმობა',
-    ask_3: 'ჩავრთოთ ვიდეო? საჭიროა ორივეს თანხმობა',
-    ask_4: 'გავცვალოთ კონტაქტები? საჭიროა ორივეს თანხმობა',
+    ask_1: 'გადავიდეთ ტექსტზე?',
+    ask_2: 'ჩავრთოთ ხმოვანი შეტყობინებები?',
+    ask_3: 'ჩავრთოთ ვიდეო?',
+    ask_4: 'გავცვალოთ კონტაქტები?',
     them_1: 'უცნობს ტექსტზე გადასვლა სურს', them_2: 'უცნობს ხმოვანი შეტყობინებების ჩართვა სურს', them_3: 'უცნობს ვიდეოს ჩართვა სურს', them_4: 'უცნობს კონტაქტების გაცვლა სურს',
+    next_step: 'შემდეგი ეტაპი',
+    next_locked: 'ჯერ დახურულია', next_soon: 'მალე გაიხსნება…', next_ready: 'გასახსნელად მზადაა',
+    consent_both: 'საჭიროა ორივეს თანხმობა',
     consent_btn: 'თანახმა ვარ',
     consent_wait: 'თანახმა ხართ. უცნობს ველოდებით…',
     unlocked: 'გაიხსნა',
@@ -191,6 +204,11 @@ export const STR = {
     mute: 'მიკროფონი', cam_toggle: 'კამერა', hang_up: 'ვიდეოს დასრულება',
     cam_denied: 'კამერაზე წვდომა გამორთულია. ჩართეთ ბრაუზერის პარამეტრებში',
     cam_none: 'ამ ბრაუზერში ვიდეოზარი არ მუშაობს',
+
+    leave_title: 'დავასრულოთ ჩატი?',
+    leave_sub: 'კავშირი უცნობთან გაწყდება და ამ ჩატში ვეღარ დაბრუნდებით.',
+    leave_stay: 'დარჩენა',
+    leave_go: 'დასრულება',
 
     photo_btn: 'სურათის გაგზავნა',
     photo_show: 'სურათის ჩვენება',

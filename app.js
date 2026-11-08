@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=18'
-import { STR, LANGS } from './i18n.js?v=18'
-import { Net } from './net.js?v=18'
+import { CONFIG } from './config.js?v=19'
+import { STR, LANGS } from './i18n.js?v=19'
+import { Net } from './net.js?v=19'
 
 // Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
 // call only, and finally everything at once plus swapping contacts. A step opens once enough time
@@ -28,6 +28,7 @@ const VOICE_BYTES = 800 * 1024   // and the largest file accepted
 const CONTACT_MAX = 40
 const IMG_PX = 1280                // photos in the chat are scaled down to this longest side
 const IMG_BYTES = 700 * 1024       // and the largest photo accepted
+const SOON_MS = 20000              // the "?" step starts moving this long before it can open
 // Reactions: the emoji and the code of its picture in Google's Noto set (still and animated).
 const REACTIONS = [['❤️', '2764_fe0f'], ['😂', '1f602'], ['🔥', '1f525'], ['😭', '1f62d'], ['💀', '1f480'], ['🥹', '1f979'], ['🫶', '1faf6'], ['👀', '1f440']]
 const REACT_CODE = Object.fromEntries(REACTIONS)
@@ -463,7 +464,7 @@ function startMatch(partner, isHost) {
     gifs: [], gifCount: 0, textCount: 0, voiceCount: 0, stageCnt: STAGES.map(() => 0),
     lastSend: 0, timers: [], gifOpen: true, urls: [],
     swap: { mine: '', theyReady: false, sentMine: false, theirs: '', done: false },
-    video: newVideo(),
+    video: newVideo(), soon: '',
   }
   H = isHost ? { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0], last: now(), lastPush: 0 } : null
 
@@ -471,7 +472,7 @@ function startMatch(partner, isHost) {
   $('#swap').replaceChildren()
   $('#textIn').value = ''
   repaintFaces()
-  document.querySelectorAll('#match .them-info').forEach(el => (el.textContent = ''))
+  document.querySelectorAll('#match .them-info, #trackTime').forEach(el => (el.textContent = ''))
   $('#themName').textContent = t('stranger')
   $('#themName').classList.remove('named')
   $('#connecting').hidden = false
@@ -486,6 +487,7 @@ function startMatch(partner, isHost) {
   G.timers.push(setInterval(hello, 800))
   G.timers.push(setTimeout(() => { if (G && !G.them && !G.ended) abortMatch() }, 9000))
   G.timers.push(setInterval(renderThem, 15000))
+  G.timers.push(setInterval(renderSoon, 1000))
   if (isHost) G.timers.push(setInterval(hostTick, 250))
 }
 
@@ -515,21 +517,71 @@ function endMatch(why) {
   clearMatchTimers()
   G.ended = true
   net.endMatch()
+  unguard()
+  if ($('#leave').open) $('#leave').close()
   if (!G.them) return startSearch()
   renderPostcard(why)
   show('end')
   vibrate(30)
 }
 
-document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', () => {
+// I end the chat myself: tell the stranger, then close everything down.
+function leaveMatch() {
   if (!G || G.ended) return
   net.send({ t: 'bye' })
   clearMatchTimers()
   G.ended = true
   net.endMatch()
+  unguard()
+}
+
+document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', () => {
+  if (!G || G.ended) return
+  leaveMatch()
   startSearch()
 }))
 addEventListener('pagehide', () => { if (G && !G.ended) net.send({ t: 'bye' }) })
+
+// ---------------------------------------------------------------- leaving by accident
+// Leaving ends the chat for both of you, so the logo, the phone's back button and closing the
+// tab ask first. "Next stranger" is a deliberate choice and goes straight away.
+
+const inChat = () => !!(G && !G.ended && G.them)
+let afterLeave = null     // where to go once the person confirms
+
+function askLeave(then) {
+  if (!inChat()) return then()
+  afterLeave = then
+  $('#leave').showModal()
+}
+$('#leaveStay').addEventListener('click', () => $('#leave').close())
+$('#leaveGo').addEventListener('click', () => {
+  const then = afterLeave
+  afterLeave = null
+  $('#leave').close()
+  leaveMatch()
+  then?.()
+})
+$('#leave').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close() })
+document.querySelectorAll('.brand').forEach(a => a.addEventListener('click', e => {
+  if (!inChat()) return
+  e.preventDefault()
+  askLeave(() => { location.href = './' })
+}))
+// Closing or reloading the tab: the browser shows its own question (iPhone Safari shows none).
+addEventListener('beforeunload', e => { if (inChat()) { e.preventDefault(); e.returnValue = '' } })
+
+// The back button: an extra history entry while connected catches it, so we can ask first.
+let guarded = false
+function guard() { if (!guarded) { history.pushState({ talkies: 1 }, ''); guarded = true } }
+function unguard() { if (guarded) { guarded = false; if (history.state?.talkies) history.back() } }
+addEventListener('popstate', () => {
+  if (!guarded) return
+  guarded = false              // the browser has already taken the extra entry off
+  if (!inChat()) return
+  guard()
+  askLeave(() => show('landing'))
+})
 
 // ---------------------------------------------------------------- incoming
 
@@ -547,6 +599,7 @@ function onGame(m) {
         repaintFaces()
         $('#connecting').hidden = true
         G.connectedAt = now()
+        guard()
         G.leftEnd = now() + STAGES[1].time
         if (H) H.last = now()
         renderThem()
@@ -650,6 +703,7 @@ function applyState(s) {
   }
   if (G.view.ac !== prev.ac || String(G.view.cons) !== String(prev.cons)) renderConsent()
   if (G.view.ac !== prev.ac) renderHint()
+  renderSoon()
 }
 
 // What the current step lets me send (see STAGES).
@@ -674,16 +728,21 @@ function renderThem() {
     sky = hr >= 5 && hr < 8 ? '🌅' : hr >= 8 && hr < 17 ? '☀️' : hr >= 17 && hr < 20 ? '🌇' : '🌙'
   } catch {}
   const sep = () => h('span', { class: 'sep' }, '·')
-  // The phone header has no room for the name above, so it goes first in the line.
-  document.querySelectorAll('#match .them-info').forEach(el => el.replaceChildren(...[
-    nm && el.closest('.chip') && h('span', { class: 'nm' }, nm),
-    nm && el.closest('.chip') && sep(),
-    h('span', { class: 'flag' }, flagOf(cc) || '🌍'),
-    g && sep(),
-    g && h('span', { class: 'g' }, g),
-    time && sep(),
-    time && h('span', { class: 'time' }, `${sky} ${time}`),
-  ].filter(Boolean)))
+  // The phone header has no room for the name above, so it goes first in the line, and the
+  // time moves down to the steps row.
+  document.querySelectorAll('#match .them-info').forEach(el => {
+    const chip = !!el.closest('.chip')
+    el.replaceChildren(...[
+      nm && chip && h('span', { class: 'nm' }, nm),
+      nm && chip && sep(),
+      h('span', { class: 'flag' }, flagOf(cc) || '🌍'),
+      g && sep(),
+      g && h('span', { class: 'g' }, g),
+      time && !chip && sep(),
+      time && !chip && h('span', { class: 'time' }, `${sky} ${time}`),
+    ].filter(Boolean))
+  })
+  $('#trackTime').textContent = time ? `${sky} ${time}` : ''
   $('#themName').textContent = nm || t('stranger')
   $('#themName').classList.toggle('named', !!nm)
   const sub = $('#feed .intro-sub')
@@ -710,9 +769,33 @@ function renderLadder() {
     return h('li', { class: `step-row ${done ? 'done' : 'now'}` },
       h('span', { class: 'dot' }, icon(done ? 'check' : 's' + i)),
       h('div', { class: 'step-body' }, h('p', { class: 'name' }, t('s' + i)), h('p', { class: 'desc' }, desc)))
-  }))
+  }), ...(STAGES[v.stage].last ? [] : [h('li', { class: `step-row next ${G.soon}` },
+    h('span', { class: 'dot' }, h('span', { class: 'q' }, '?')),
+    h('div', { class: 'step-body' }, h('p', { class: 'name' }, t('next_step')), h('p', { class: 'desc' }, t('next_' + (G.soon || 'locked')))))]))
   $('#stageTitle').replaceChildren(icon('s' + v.stage), h('span', {}, t('s' + v.stage)))
   document.body.classList.toggle('text-open', v.stage >= 2)
+  renderTrack()
+}
+
+// Phones have no sidebar: the same steps as a row of small circles in the chat header.
+function renderTrack() {
+  const v = G.view
+  $('#track').replaceChildren(...STAGES.slice(1, v.stage + 1).map((st, j) => {
+    const i = j + 1, done = i < v.stage
+    return h('span', { class: `tk ${done ? 'done' : 'now'}`, title: t('s' + i) }, icon(done ? 'check' : 's' + i), !done && h('b', {}, t('s' + i)))
+  }), ...(STAGES[v.stage].last ? [] : [h('span', { class: `tk next ${G.soon}`, 'aria-label': t('next_' + (G.soon || 'locked')) }, h('span', { class: 'q' }, '?'))]))
+}
+
+// How close the next step is: 'ready' (it can be opened now), 'soon' (both have sent enough
+// and the time is nearly up) or '' (a while yet). Redrawn only when that changes.
+function renderSoon() {
+  if (!G || G.ended) return
+  const v = G.view, st = STAGES[v.stage]
+  const soon = st.last ? '' : v.ac ? 'ready'
+    : G.them && v.cnt[0] >= st.need && v.cnt[1] >= st.need && G.leftEnd - now() <= SOON_MS ? 'soon' : ''
+  if (soon === G.soon) return
+  G.soon = soon
+  renderLadder()
 }
 
 // The line under the step's name in the chat header: what the step is about.
@@ -739,7 +822,9 @@ function renderConsent() {
   const mine = v.cons[G.host ? 0 : 1], theirs = v.cons[G.host ? 1 : 0]
   box.replaceChildren(...[
     h('span', { class: 'consent-ico' }, icon('s' + (v.stage + 1))),
-    h('div', {}, h('p', {}, mine ? t('consent_wait') : t('ask_' + v.stage)), theirs && !mine && h('p', { class: 'them-in' }, t('them_' + v.stage))),
+    // Once they've agreed, their wish replaces the question: it already names the step.
+    h('div', {}, mine ? h('p', {}, t('consent_wait')) : theirs ? h('p', { class: 'them-in' }, t('them_' + v.stage))
+      : [h('p', {}, t('ask_' + v.stage)), h('p', { class: 'consent-sub' }, t('consent_both'))]),
     !mine && h('button', { class: 'btn small', type: 'button', onclick: () => {
       if (H) hostConsent(0)
       else { net.send({ t: 'ok', s: v.stage }); G.view.cons = [...G.view.cons]; G.view.cons[1] = true; renderConsent() }
@@ -1203,6 +1288,35 @@ function openViewer(url) {
 }
 $('#viewer').addEventListener('click', () => $('#viewer').close())
 $('#imgBtn').addEventListener('click', () => $('#imgFile').click())
+
+// Pasting or dropping a picture sends it like the photo button does, wherever photos are allowed.
+// Pasted text goes into the text field as usual.
+document.addEventListener('paste', e => {
+  if (document.body.dataset.screen !== 'match' || !allows('i') || $('#profile').open) return
+  const items = [...(e.clipboardData?.items || [])]
+  const file = items.find(i => i.kind === 'file' && i.type.startsWith('image/'))?.getAsFile()
+  if (!file || (items.some(i => i.type === 'text/plain') && e.target.closest?.('input'))) return
+  e.preventDefault()
+  sendPhoto(file)
+})
+const chatEl = $('.chat')
+const dragsFiles = e => [...(e.dataTransfer?.types || [])].includes('Files')
+// A file dropped anywhere else would make the browser open it and leave the chat.
+chatEl.addEventListener('dragover', e => {
+  if (!dragsFiles(e)) return
+  e.preventDefault()
+  chatEl.classList.toggle('drop', allows('i'))
+})
+chatEl.addEventListener('dragleave', e => { if (!chatEl.contains(e.relatedTarget)) chatEl.classList.remove('drop') })
+chatEl.addEventListener('drop', e => {
+  if (!dragsFiles(e)) return
+  e.preventDefault()
+  chatEl.classList.remove('drop')
+  const file = [...e.dataTransfer.files].find(f => f.type.startsWith('image/'))
+  if (file && allows('i')) sendPhoto(file)
+})
+addEventListener('dragover', e => { if (dragsFiles(e) && document.body.dataset.screen === 'match') e.preventDefault() })
+addEventListener('drop', e => { if (dragsFiles(e) && document.body.dataset.screen === 'match') e.preventDefault() })
 $('#imgFile').addEventListener('change', e => {
   const file = e.target.files?.[0]
   e.target.value = ''
@@ -1233,6 +1347,7 @@ function renderSwap() {
   const status = box.querySelector('.swap-status')
   status.textContent = s.mine ? t('swap_wait') : s.theyReady ? t('swap_them') : t('swap_sub')
   status.classList.toggle('them-in', !s.mine && s.theyReady)
+  status.classList.toggle('plain', !s.mine && !s.theyReady)    // just the explanation: phones hide it
 }
 
 function submitSwap() {
@@ -1562,6 +1677,36 @@ $('#pfFile').addEventListener('change', async e => {
   pfChanged()
 })
 $('#pfRm').addEventListener('click', () => { profile.ph = ''; pfChanged() })
+
+// ---------------------------------------------------------------- phone keyboard
+// iPhone Safari doesn't shrink the page when the keyboard opens; it slides the whole page up
+// instead, so the header vanishes and messages hide behind the keyboard. The page is pinned to
+// exactly the visible area instead (body is position: fixed at these numbers). body.kb marks an
+// open keyboard, for a more compact layout.
+
+const vv = window.visualViewport
+function fitViewport() {
+  const root = document.documentElement.style
+  root.setProperty('--vh', `${Math.round(vv.height)}px`)
+  root.setProperty('--vt', `${Math.round(vv.offsetTop)}px`)
+}
+if (vv) {
+  vv.addEventListener('resize', fitViewport)
+  vv.addEventListener('scroll', fitViewport)
+  fitViewport()
+}
+const typing = el => el?.matches?.('input:not([type=file]), textarea') && matchMedia('(pointer: coarse)').matches
+addEventListener('focusin', e => {
+  document.body.classList.toggle('kb', !!typing(e.target))
+  document.body.dataset.focus = typing(e.target) ? e.target.id : ''
+  // Keep the newest message in sight above the keyboard.
+  if (typing(e.target)) setTimeout(() => { const f = $('#feed'); f.scrollTop = f.scrollHeight }, 300)
+})
+addEventListener('focusout', () => setTimeout(() => {
+  const el = document.activeElement
+  document.body.classList.toggle('kb', !!typing(el))
+  document.body.dataset.focus = typing(el) ? el.id : ''
+}, 50))
 
 // ---------------------------------------------------------------- boot
 

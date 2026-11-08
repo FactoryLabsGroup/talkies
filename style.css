@@ -30,6 +30,10 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
+html { overscroll-behavior: none; }
+/* The page always covers exactly the visible area (see fitViewport in app.js), so a phone's
+   keyboard pushes the composer up instead of sliding the whole page out of view. */
+body { position: fixed; left: 0; top: var(--vt, 0px); width: 100%; height: var(--vh, 100%); }
 body {
   display: flex; flex-direction: column;
   background: var(--bg); color: var(--text);
@@ -255,7 +259,8 @@ body[data-screen="match"] .nav { max-width: 1792px; height: 56px; padding: 0 16p
 .composer { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 14px 24px 18px; border-top: 1px solid var(--border); background: var(--surface); }
 .consent { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--accent-soft); border: 1px solid var(--accent-ring); }
 .consent p { font-size: 14px; font-weight: 500; flex: 1 1 60%; }
-.consent .them-in { flex-basis: 100%; color: var(--success); font-size: 13px; }
+.consent .them-in { color: var(--success); }
+.consent .consent-sub { font-size: 12.5px; font-weight: 400; color: var(--text-2); margin-top: 1px; }
 .consent .btn { background: var(--accent); color: #fff; height: 34px; padding: 0 14px; font-size: 13px; border-radius: 9px; }
 
 .tray { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 6px 6px 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border-2); transition: border-color .15s, box-shadow .15s; }
@@ -564,6 +569,28 @@ html[lang="ka"] .lead { font-size: 18px; }
 html[lang="ka"] .jinx-title, html[lang="ka"] .lv-kicker, html[lang="ka"] .pc-kicker { letter-spacing: .01em; }
 html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
 
+/* ---------- leaving a chat */
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger:hover { filter: brightness(1.08); }
+.leave { width: min(360px, calc(100vw - 32px)); }
+.leave-sub { margin-top: -8px; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.leave-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.leave-btns .btn { height: 44px; justify-content: center; }
+
+/* ---------- the "?" step: what comes next stays hidden, it only moves when it's close */
+.step-row.now:not(:last-child)::before { background: repeating-linear-gradient(to bottom, var(--border-2) 0 3px, transparent 3px 7px); }
+.step-row.next .dot { border-style: dashed; color: var(--muted); }
+.step-row.next .name { color: var(--text-2); font-weight: 500; }
+.step-row .q, .tk .q { display: inline-block; font-size: 14px; font-weight: 700; line-height: 1; }
+.step-row.next.soon .dot, .step-row.next.ready .dot { border: 1px solid var(--accent); color: var(--accent); background: var(--accent-soft); animation: soonPulse 1.4s ease-out infinite; }
+.step-row.next.ready .dot { background: var(--accent); color: #fff; }
+.step-row.next.soon .desc, .step-row.next.ready .desc { color: var(--accent); }
+.step-row.next.soon .q, .step-row.next.ready .q, .tk.next.soon .q, .tk.next.ready .q { animation: soonWiggle 1.4s ease-in-out infinite; }
+@keyframes soonPulse { 0% { box-shadow: 0 0 0 0 var(--accent-ring); } 70%, 100% { box-shadow: 0 0 0 10px rgba(124, 108, 255, 0); } }
+@keyframes soonWiggle { 0%, 100% { transform: none; } 20% { transform: rotate(-14deg) scale(1.15); } 40% { transform: rotate(12deg) scale(1.15); } 60% { transform: rotate(-6deg) scale(1.05); } 80% { transform: none; } }
+.track-row, .brand-mini { display: none; }
+.chat.drop { outline: 2px dashed var(--accent); outline-offset: -10px; }
+
 /* ---------- voice-only and video-only steps: one big button instead of the text field */
 .tray.solo { padding: 6px; }
 .solo-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 46px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #fff; background: linear-gradient(135deg, var(--me-1), var(--me-2)); box-shadow: 0 8px 22px -10px var(--accent-ring); transition: transform .12s var(--ease), filter .15s; }
@@ -660,6 +687,8 @@ html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
   .gif-need { gap: 6px; }
   .need { height: 26px; padding: 0 9px; font-size: 12px; }
   .gif-panel .gif-grid { grid-auto-rows: 72px; }
+  .gif-msg { max-width: 168px; max-height: 168px; }
+  .photo-img { max-width: min(200px, 56vw); max-height: 260px; }
   .gif-panel .gif img { height: 72px; }
   .bubble.voice { min-width: 0; width: 240px; max-width: 82%; }
   .react-pop { gap: 0; margin-left: 30px; }
@@ -671,6 +700,55 @@ html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
   .v-local { width: 100px; right: 10px; top: 10px; }
   .v-local.tall { width: 72px; }
   .age { margin-top: 4px; }
+
+  /* The chat on a phone: no site header, everything the chat needs in two short rows. */
+  body[data-screen="match"] .nav { display: none; }
+  .chat-head { padding: 8px 12px; gap: 8px; }
+  .brand-mini { flex: none; display: grid; place-items: center; width: 34px; height: 36px; margin-right: -2px; }
+  .brand-mini .mark { width: 28px; height: 28px; }
+  .chip { flex: 0 1 auto; margin-right: auto; }
+  .stage-head { display: none; }
+  .track-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; }
+  .track { display: flex; align-items: center; min-width: 0; }
+  .tk { position: relative; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-2); color: var(--muted); background: var(--surface); }
+  .tk:not(:first-child) { margin-left: 10px; }
+  .tk:not(:first-child)::before { content: ''; position: absolute; right: 100%; top: 50%; width: 10px; height: 1px; background: var(--border-2); }
+  .tk .ico { width: 12px; height: 12px; }
+  .tk .q { font-size: 12px; }
+  .tk.done { background: var(--success-soft); border-color: transparent; color: var(--success); }
+  .tk.now { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px 0 7px; border-radius: 999px; border-color: transparent; color: #fff; background: var(--accent); font-size: 12.5px; }
+  .tk.now b { font-weight: 600; white-space: nowrap; }
+  .tk.next { border-style: dashed; }
+  .tk.next.soon, .tk.next.ready { border: 1px solid var(--accent); color: var(--accent); background: var(--accent-soft); animation: soonPulse 1.4s ease-out infinite; }
+  .tk.next.ready { color: #fff; background: var(--accent); }
+  .track-time { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .composer { gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
+  body.kb .composer { padding-bottom: 8px; }
+  .consent { flex-wrap: nowrap; gap: 8px; padding: 8px 8px 8px 10px; }
+  .consent > div { min-width: 0; flex: 1; }
+  .consent p { font-size: 13px; line-height: 1.35; }
+  .consent .consent-ico, .consent .consent-sub { display: none; }
+  .consent .btn { flex: none; height: 32px; padding: 0 12px; }
+  .swap { gap: 8px; padding: 10px; }
+  .swap-head .consent-ico, .swap-status.plain { display: none; }
+  .swap-head p { font-size: 13px; }
+  .swap-in, .swap-form .btn { height: 40px; }
+  .video { height: calc(var(--vh, 100vh) * .34); }
+  /* While typing, only what the typing needs: the steps row and the contact box (unless that's
+     where you type) step aside, and the video shrinks. */
+  body.kb .track-row, body.kb[data-focus="textIn"] #swap { display: none; }
+  body.kb .video { height: calc(var(--vh, 100vh) * .26); margin-top: 6px; }
+  body.kb .v-local { width: 64px; }
+  body.kb .v-local.tall { width: 48px; }
+  body.kb .v-bar { bottom: 6px; }
+  body.kb .v-btn { width: 36px; height: 36px; }
+  body.kb .gif-chips { display: none; }
+  body.kb .gif-panel .gif-grid { height: 112px; }
+  .text-in { font-size: 16px; }   /* 16px keeps iPhone Safari from zooming in on focus */
+  .tray { gap: 6px; padding-left: 8px; }
+  .tray .mic-btn { width: 34px; height: 34px; }
+  .tray .gif-btn { padding: 0 8px; }
+  .swap-in, .gif-search, .pf-input { font-size: 16px; }
 }
 @media (max-width: 380px) {
   .tab .ico { display: none; }
