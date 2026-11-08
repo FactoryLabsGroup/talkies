@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=12'
-import { STR, LANGS, LANG_NAME } from './i18n.js?v=12'
-import { Net } from './net.js?v=12'
+import { CONFIG } from './config.js?v=13'
+import { STR, LANGS } from './i18n.js?v=13'
+import { Net } from './net.js?v=13'
 
 // Talkies: two strangers start with GIFs only. Once a minute has passed and both have sent a few
 // GIFs, they can switch to text, but only if both agree.
@@ -481,7 +481,7 @@ function renderAll() {
 
 function renderThem() {
   if (!G?.them) return
-  const { tz, cc, lang: l } = G.them
+  const { tz, cc } = G.them
   const time = localTime(tz)
   let sky = ''
   try {
@@ -490,7 +490,6 @@ function renderThem() {
   } catch {}
   document.querySelectorAll('#match .them-info').forEach(el => el.replaceChildren(...[
     h('span', { class: 'flag' }, flagOf(cc) || '🌍'),
-    h('span', {}, LANG_NAME[l]),
     time && h('span', { class: 'sep' }, '·'),
     time && h('span', { class: 'time' }, `${sky} ${time}`),
   ].filter(Boolean)))
@@ -541,12 +540,12 @@ function renderNeed() {
 
 // Welcome card at the top of a fresh match.
 function addIntro() {
-  const { tz, cc, lang: l } = G.them
+  const { tz, cc } = G.them
   const time = localTime(tz)
   pushFeed(h('div', { class: 'intro' },
     h('div', { class: 'intro-orbs' }, h('span', { class: 'ava you' }), h('span', { class: 'intro-link' }), h('span', { class: 'ava', style: `--hue:${G.hue}` })),
     h('p', { class: 'intro-title' }, t('intro_title')),
-    h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'} ${LANG_NAME[l]}${time ? ' · ' + time : ''}`),
+    h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'}${time ? ' · ' + time : ''}`),
     h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(TEXT_AFTER / 1000), g: GIF_NEED }))))
 }
 
