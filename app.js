@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=20'
-import { STR, LANGS } from './i18n.js?v=20'
-import { Net } from './net.js?v=20'
+import { CONFIG } from './config.js?v=21'
+import { STR, LANGS } from './i18n.js?v=21'
+import { Net } from './net.js?v=21'
 
 // Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
 // call only, and finally everything at once plus swapping contacts. A step opens once enough time
@@ -29,6 +29,8 @@ const CONTACT_MAX = 40
 const IMG_PX = 1280                // photos in the chat are scaled down to this longest side
 const IMG_BYTES = 700 * 1024       // and the largest photo accepted
 const SOON_MS = 20000              // the "?" step starts moving this long before it can open
+const BEAT_MS = 3000               // both sides say "still here" this often
+const LOST_MS = 30000              // and a chat with nothing heard for this long is over
 // Reactions: the emoji and the code of its picture in Google's Noto set (still and animated).
 const REACTIONS = [['❤️', '2764_fe0f'], ['😂', '1f602'], ['🔥', '1f525'], ['😭', '1f62d'], ['💀', '1f480'], ['🥹', '1f979'], ['🫶', '1faf6'], ['👀', '1f440']]
 const REACT_CODE = Object.fromEntries(REACTIONS)
@@ -460,7 +462,7 @@ function startMatch(partner, isHost) {
   G = {
     partner, host: isHost, them: null, theyGotMine: false, ended: false,
     view: { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0] },
-    leftEnd: now() + STAGES[1].time, startedAt: now(), connectedAt: 0, maxStage: 1,
+    leftEnd: now() + STAGES[1].time, startedAt: now(), connectedAt: 0, heardAt: now(), maxStage: 1,
     gifs: [], gifCount: 0, textCount: 0, voiceCount: 0, stageCnt: STAGES.map(() => 0),
     lastSend: 0, timers: [], gifOpen: true, urls: [],
     swap: { mine: '', theyReady: false, sentMine: false, theirs: '', done: false },
@@ -488,6 +490,7 @@ function startMatch(partner, isHost) {
   G.timers.push(setTimeout(() => { if (G && !G.them && !G.ended) abortMatch() }, 9000))
   G.timers.push(setInterval(renderThem, 15000))
   G.timers.push(setInterval(renderSoon, 1000))
+  G.timers.push(setInterval(beat, BEAT_MS))
   if (isHost) G.timers.push(setInterval(hostTick, 250))
 }
 
@@ -524,6 +527,20 @@ function endMatch(why) {
   show('end')
   vibrate(30)
 }
+
+// Both sides send a small "still here" every few seconds (the host's state updates count too).
+// If nothing at all has come from the stranger for LOST_MS, the connection is gone even when the
+// browser hasn't noticed: the chat ends here as well, so it never stays open for one person only.
+function beat() {
+  if (!G?.them || G.ended) return
+  if (now() - G.heardAt > LOST_MS) {
+    net.send({ t: 'bye' })
+    return endMatch('lost')
+  }
+  net.send({ t: 'p' })
+}
+// Back on a tab the phone or browser had paused: check straight away.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) beat() })
 
 // I end the chat myself: tell the stranger, then close everything down.
 function leaveMatch() {
@@ -590,6 +607,7 @@ addEventListener('popstate', () => {
 
 function onGame(m) {
   if (!G || G.ended) return
+  G.heardAt = now()
   switch (m.t) {
     case 'hi': {
       const first = !G.them
@@ -1023,6 +1041,7 @@ async function sendVoice(blob, d, p) {
 
 function onVoice(data, meta) {
   if (!G || G.ended || !meta || typeof meta.id !== 'string') return
+  G.heardAt = now()
   const size = data?.byteLength ?? data?.size ?? 0
   if (!size || size > VOICE_BYTES) return
   const id = meta.id.slice(0, 12)
@@ -1249,6 +1268,7 @@ async function sendPhoto(file) {
 
 function onPhoto(data, meta) {
   if (!G || G.ended || typeof meta.id !== 'string') return
+  G.heardAt = now()
   const size = data?.byteLength ?? data?.size ?? 0
   if (!size || size > IMG_BYTES) return
   const id = meta.id.slice(0, 12)
