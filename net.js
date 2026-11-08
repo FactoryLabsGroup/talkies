@@ -7,7 +7,7 @@
 // the room the partner is in.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=17'
+import { CONFIG } from './config.js?v=18'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
@@ -18,7 +18,7 @@ const nonce = () => Math.random().toString(36).slice(2, 10)
 
 export class Net {
   constructor(handlers) {
-    this.h = handlers          // { onCount(n), onMatch(partnerId, isHost), onGame(msg), onVoice(data, meta), onStream(stream), onPartnerGone() }
+    this.h = handlers          // { onCount(n), onMatch(partnerId, isHost), onGame(msg), onFile(data, meta), onStream(stream), onPartnerGone() }
     this.id = selfId
     this.status = 'idle'
     this.peers = new Map()     // peerId → status
@@ -30,7 +30,7 @@ export class Net {
     this.timer = null
     this.priv = null           // private invite room { room, g }
     this.game = null           // the action game messages go through (lobby or private)
-    this.voice = null          // and the one voice messages go through
+    this.voice = null          // and the one for files: voice messages and photos
     this.media = null          // the room camera streams go through
   }
 
@@ -71,7 +71,7 @@ export class Net {
   }
 
   receiveVoice(data, meta, peerId, via) {
-    if (peerId === this.partner && via === this.voice) this.h.onVoice?.(data, meta)
+    if (peerId === this.partner && via === this.voice) this.h.onFile?.(data, meta)
   }
 
   receiveStream(stream, peerId, room) {
@@ -188,7 +188,7 @@ export class Net {
     if (this.partner) this.game.send(msg, { target: this.partner })
   }
 
-  sendVoice(data, meta) {
+  sendFile(data, meta) {
     if (this.partner) return this.voice.send(data, { target: this.partner, metadata: meta })
   }
 

@@ -1,22 +1,24 @@
-import { CONFIG } from './config.js?v=17'
-import { STR, LANGS } from './i18n.js?v=17'
-import { Net } from './net.js?v=17'
+import { CONFIG } from './config.js?v=18'
+import { STR, LANGS } from './i18n.js?v=18'
+import { Net } from './net.js?v=18'
 
-// Talkies: two strangers climb five steps: GIFs only, then words, voice messages, a video call,
-// and finally swapping contacts. A step opens once enough time has passed and both have sent
-// enough of the current kind of message, and only if both agree.
+// Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
+// call only, and finally everything at once plus swapping contacts. A step opens once enough time
+// has passed and both have sent enough of the current kind of message, and only if both agree.
+// Neither the time nor what comes next is shown; the consent bar names the next step when it's ready.
 
 // ---------------------------------------------------------------- content
 
 const FAST = new URLSearchParams(location.search).has('fast')
-// kind: which messages count toward opening the next step ('g' GIF, 'w' text, 'v' voice).
-// need: how many of them each side sends. time: how long the step lasts at least.
+// allow: what you can send on the step ('g' GIFs, 'w' text, 'i' photos, 'v' voice messages,
+// 'c' the camera). kind: which messages count toward opening the next step (photos count as
+// text). need: how many of them each side sends. time: how long the step lasts at least.
 const STAGES = [null,
-  { kind: 'g', need: FAST ? 1 : 3, time: FAST ? 10000 : 60000 },
-  { kind: 'w', need: FAST ? 1 : 5, time: FAST ? 10000 : 90000 },
-  { kind: 'v', need: 1, time: FAST ? 10000 : 45000 },
-  { kind: '', need: 0, time: FAST ? 10000 : 60000 },   // video: the camera is optional, only time counts
-  { last: true },
+  { allow: 'g', kind: 'g', need: FAST ? 1 : 3, time: FAST ? 10000 : 60000 },
+  { allow: 'gwi', kind: 'w', need: FAST ? 1 : 5, time: FAST ? 10000 : 90000 },
+  { allow: 'v', kind: 'v', need: 1, time: FAST ? 10000 : 45000 },
+  { allow: 'c', kind: '', need: 0, time: FAST ? 10000 : 60000 },   // video: the camera is optional, only time counts
+  { allow: 'gwivc', last: true },
 ]
 const VIDEO = 4
 const LAST = STAGES.length - 1
@@ -24,7 +26,11 @@ const TEXT_MAX = 300
 const VOICE_MAX = 30000          // longest voice message, ms
 const VOICE_BYTES = 800 * 1024   // and the largest file accepted
 const CONTACT_MAX = 40
-const REACTIONS = ['❤️', '😂', '😮', '👀']
+const IMG_PX = 1280                // photos in the chat are scaled down to this longest side
+const IMG_BYTES = 700 * 1024       // and the largest photo accepted
+// Reactions: the emoji and the code of its picture in Google's Noto set (still and animated).
+const REACTIONS = [['❤️', '2764_fe0f'], ['😂', '1f602'], ['🔥', '1f525'], ['😭', '1f62d'], ['💀', '1f480'], ['🥹', '1f979'], ['🫶', '1faf6'], ['👀', '1f440']]
+const REACT_CODE = Object.fromEntries(REACTIONS)
 // Quick GIF searches. The label is shown in the player's language; the search runs in English,
 // where GIPHY has the best results.
 const GIF_CHIPS = [['Hi', 'გამარჯობა', 'hello'], ['Haha', 'ჰაჰა', 'laugh'], ['Wow', 'ვაა', 'wow'], ['Yes', 'კი', 'yes'],
@@ -33,6 +39,7 @@ const GIF_CHIPS = [['Hi', 'გამარჯობა', 'hello'], ['Haha', 'ჰ
 const NOTO = ['1f602', '1f60d', '1f62d', '1f631', '1f92f', '1f973', '1f60e', '1f914', '1f644', '1f634', '1f480', '1f525',
   '2764_fe0f', '1f44b', '1f44f', '1f64f', '1f483', '1f389', '1f680', '1f648']
 const notoUrl = code => `https://fonts.gstatic.com/s/e/notoemoji/latest/${code}/512.webp`
+const notoStill = code => `https://fonts.gstatic.com/s/e/notoemoji/latest/${code}/emoji.svg`
 const GIF_OK = /^https:\/\/(media\d?\.giphy\.com|i\.giphy\.com|fonts\.gstatic\.com\/s\/e\/notoemoji)\//
 
 const TZ_CC = Object.fromEntries(('Asia/Tbilisi GE,Europe/London GB,Europe/Dublin IE,Europe/Paris FR,Europe/Berlin DE,' +
@@ -74,6 +81,8 @@ const ICONS = {
   play: SVG('<path d="M7.5 4.8v14.4L19 12z" fill="currentColor"/>'),
   pause: SVG('<path d="M8.5 5v14M15.5 5v14"/>', 3),
   x: SVG('<path d="M18 6 6 18M6 6l12 12"/>'),
+  image: SVG('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m20.5 16.5-5-5L6 20"/>'),
+  expand: SVG('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),
 }
 function icon(name, cls = 'ico') {
   const s = document.createElement('span')
@@ -359,7 +368,7 @@ const net = new Net({
   onCount: n => { online = n; renderCount(); renderDebug() },
   onMatch: (partner, isHost) => startMatch(partner, isHost),
   onGame: msg => onGame(msg),
-  onVoice: (data, meta) => onVoice(data, meta),
+  onFile: (data, meta) => (meta?.k === 'img' ? onPhoto(data, meta) : onVoice(data, meta)),
   onStream: stream => onStream(stream),
   onPartnerGone: () => endMatch('left'),
 })
@@ -478,13 +487,11 @@ function startMatch(partner, isHost) {
   G.timers.push(setTimeout(() => { if (G && !G.them && !G.ended) abortMatch() }, 9000))
   G.timers.push(setInterval(renderThem, 15000))
   if (isHost) G.timers.push(setInterval(hostTick, 250))
-  G.raf = requestAnimationFrame(drawProgress)
 }
 
 function clearMatchTimers() {
   if (!G) return
   G.timers.forEach(x => { clearInterval(x); clearTimeout(x) })
-  cancelAnimationFrame(G.raf)
   stopRec(false)
   playing?.stop()
   stopVideo(G.partner)
@@ -562,7 +569,7 @@ function onGame(m) {
       break
     }
     case 'ack': $('#feed').querySelector(`.row.me .bubble[data-id="${CSS.escape(String(m.id))}"]`)?.classList.add('sent'); break
-    case 'r': if (REACTIONS.includes(m.e)) addReaction(String(m.id), m.e, 'mine'); break
+    case 'r': if (REACT_CODE[m.e]) addReaction(String(m.id), m.e, 'mine'); break
     case 's': if (!H) applyState(m); break
     case 'ok': if (H && m.s === H.stage) hostConsent(1); break
     case 'cx': swapReady(); break
@@ -635,18 +642,22 @@ function applyState(s) {
     if (stage > prev.stage) {
       G.maxStage = Math.max(G.maxStage, stage)
       if (stage === 2) G.gifOpen = false
+      if (!allows('v')) stopRec(false)
       if (stage === VIDEO) pushFeed(h('div', { class: 'feed-note' }, icon('s4'), h('span', {}, t('video_note'))))
       levelUpFx(stage)
     }
     return renderAll()
   }
   if (G.view.ac !== prev.ac || String(G.view.cons) !== String(prev.cons)) renderConsent()
-  if (G.view.ac !== prev.ac || String(G.view.cnt) !== String(prev.cnt)) { renderNeed(); renderLadder() }
+  if (G.view.ac !== prev.ac) renderHint()
 }
+
+// What the current step lets me send (see STAGES).
+const allows = what => !!G && STAGES[G.view.stage].allow.includes(what)
 
 function renderAll() {
   renderLadder()
-  renderNeed()
+  renderHint()
   renderConsent()
   renderComposer()
   renderVideo()
@@ -688,68 +699,27 @@ function onProfile(m) {
   renderThem()
 }
 
-const mineCnt = () => G.view.cnt[G.host ? 0 : 1]
-const theirCnt = () => G.view.cnt[G.host ? 1 : 0]
-const dots = (n, need) => h('span', { class: 'need-dots' }, Array.from({ length: need }, (_, i) => h('i', { class: i < n ? 'on' : '' })))
-
-// The ladder in the sidebar: what's done, where you are and what it takes to go on, what's next.
+// The ladder in the sidebar: the steps you've been through and the one you're on. What comes
+// next stays hidden until both can open it.
 function renderLadder() {
   const v = G.view
-  $('#ladder').replaceChildren(...STAGES.slice(1).map((st, j) => {
-    const i = j + 1
-    const state = i < v.stage ? 'done' : i === v.stage ? 'now' : 'locked'
-    const desc = state === 'done' ? (i === VIDEO ? t(G.video.saw ? 'done_4' : 'done_4_none') : tn('done_' + i, G.stageCnt[i]))
-      : state === 'locked' ? t('u' + i)
+  $('#ladder').replaceChildren(...STAGES.slice(1, v.stage + 1).map((st, j) => {
+    const i = j + 1, done = i < v.stage
+    const desc = done ? (i === VIDEO ? t(G.video.saw ? 'done_4' : 'done_4_none') : tn('done_' + i, G.stageCnt[i]))
       : st.last && G.swap.done ? t('swapped') : t('d' + i)
-    return h('li', { class: `step-row ${state}` },
-      h('span', { class: 'dot' }, icon(state === 'done' ? 'check' : state === 'locked' ? 'lock' : 's' + i)),
-      h('div', { class: 'step-body' }, h('p', { class: 'name' }, t('s' + i)), h('p', { class: 'desc' }, desc),
-        state === 'now' && !st.last && needCard()))
+    return h('li', { class: `step-row ${done ? 'done' : 'now'}` },
+      h('span', { class: 'dot' }, icon(done ? 'check' : 's' + i)),
+      h('div', { class: 'step-body' }, h('p', { class: 'name' }, t('s' + i)), h('p', { class: 'desc' }, desc)))
   }))
   $('#stageTitle').replaceChildren(icon('s' + v.stage), h('span', {}, t('s' + v.stage)))
   document.body.classList.toggle('text-open', v.stage >= 2)
 }
 
-// What it takes to open the next step: a count for each side and the time left.
-function needCard() {
+// The line under the step's name in the chat header: what the step is about.
+function renderHint() {
   const v = G.view, st = STAGES[v.stage]
-  if (v.ac) return h('div', { class: 'need-card ready' }, h('p', { class: 'need-title' }, t('ready_' + v.stage)))
-  const row = (who, n) => h('div', { class: `need-row${n >= st.need ? ' done' : ''}` }, h('span', {}, who), dots(n, st.need))
-  return h('div', { class: 'need-card' },
-    h('p', { class: 'need-title' }, tn('need_' + v.stage, st.need)),
-    st.need > 0 && row(t('you'), mineCnt()), st.need > 0 && row(t('stranger'), theirCnt()),
-    h('div', { class: 'need-bar' }, h('i', { id: 'needFill' })),
-    h('div', { class: 'need-row' }, h('span', {}, t('time')), h('span', { id: 'needTime', class: 'need-time' })))
-}
-
-// Countdown to the next step, drawn every frame from the last synced value.
-function drawProgress() {
-  if (!G || G.ended) return
-  const v = G.view, st = STAGES[v.stage]
-  const left = st.last || v.ac ? 0 : G.them ? Math.max(0, G.leftEnd - now()) : st.time
-  const frac = st.last ? 1 : 1 - left / st.time
-  document.querySelectorAll('#match .fuse-fill, #needFill').forEach(f => (f.style.transform = `scaleX(${frac})`))
-  const nt = $('#needTime')
-  if (nt) {
-    const s = left > 0 ? mmss(left) : '✓'
-    if (nt.textContent !== s) { nt.textContent = s; nt.classList.toggle('done', left <= 0) }
-  }
-  const mine = mineCnt()
-  const hint = st.last ? (G.swap.done ? t('swapped') : t('d' + v.stage)) : v.ac ? t('ready_' + v.stage)
-    : left > 0 ? t('in_' + v.stage, { time: mmss(left) })
-    : mine < st.need ? tn('more_' + v.stage, st.need - mine) : st.need ? t('wait_' + v.stage) : t('ready_' + v.stage)
-  if ($('#meterText').textContent !== hint) $('#meterText').textContent = hint
+  $('#meterText').textContent = st.last && G.swap.done ? t('swapped') : t('d' + v.stage)
   $('#match').classList.toggle('ready', v.ac || !!st.last)
-  G.raf = requestAnimationFrame(drawProgress)
-}
-
-// The same counts as small pills in the header, for phones where the sidebar is hidden.
-function renderNeed() {
-  const v = G.view, st = STAGES[v.stage], el = $('#gifNeed')
-  el.hidden = !!st.last || v.ac || !st.need
-  if (el.hidden) return
-  const group = (who, n) => h('span', { class: `need${n >= st.need ? ' done' : ''}` }, h('span', { class: 'need-who' }, who), dots(n, st.need))
-  el.replaceChildren(group(t('you'), mineCnt()), group(t('stranger'), theirCnt()))
 }
 
 // Welcome card at the top of a fresh match.
@@ -758,7 +728,7 @@ function addIntro() {
     h('div', { class: 'intro-orbs' }, ava(myFace(), 'you me-face'), h('span', { class: 'intro-link' }), ava(themFace(), 'them-face')),
     h('p', { class: 'intro-title' }, t('intro_title')),
     h('p', { class: 'intro-sub' }, introLine()),
-    h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(STAGES[1].time / 1000), g: STAGES[1].need }))))
+    h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint'))))
 }
 
 function renderConsent() {
@@ -788,7 +758,7 @@ function cleanTokens(tk) {
 }
 
 function sendTokens(tk) {
-  if (!G || G.ended || !G.them || now() - G.lastSend < 600) return false
+  if (!G || G.ended || !G.them || !allows(tk[0].k) || now() - G.lastSend < 600) return false
   G.lastSend = now()
   const id = rid()
   net.send({ t: 'm', id, tk })
@@ -800,11 +770,11 @@ function sendTokens(tk) {
 
 function sendGif(g) {
   if (!sendTokens([{ k: 'g', v: g.url, w: g.w, h: g.h }])) return
-  if (G.view.stage >= 2) { G.gifOpen = false; renderComposer() }
+  if (allows('w')) { G.gifOpen = false; renderComposer() }
 }
 
 function sendText() {
-  if (!G || G.view.stage < 2) return
+  if (!allows('w')) return
   const input = $('#textIn')
   const v = input.value.trim().slice(0, TEXT_MAX)
   if (!v || !sendTokens([{ k: 'w', v }])) return
@@ -812,21 +782,40 @@ function sendText() {
   updateSend()
 }
 
-// Composer: the GIF picker is always open while it's GIFs only. Once text is open, the text
-// field takes over and the GIF button opens the picker on demand. The mic joins at step 3.
+// Composer. GIFs only: the picker is always open. With words: the text field, plus buttons for
+// GIFs and photos. Voice only or video only: one big button and nothing else. The last step has
+// everything, the mic and camera as small buttons.
 function renderComposer() {
-  const textOpen = G.view.stage >= 2
-  $('#tray').hidden = !textOpen || !!rec
+  const allow = STAGES[G.view.stage].allow, text = allows('w')
+  const solo = allow === 'v' || allow === 'c'
+  $('#tray').hidden = allow === 'g' || !!rec
   $('#rec').hidden = !rec
-  $('#micBtn').hidden = G.view.stage < 3
-  $('#camBtn').hidden = G.view.stage < VIDEO
-  $('#gifPanel').hidden = textOpen && !G.gifOpen
-  $('#gifBtn').classList.toggle('on', G.gifOpen && textOpen)
-  $('#gifBtn').setAttribute('aria-expanded', String(G.gifOpen && textOpen))
-  if (!$('#gifPanel').hidden && !gifState.loaded) loadGifs()
+  $('#tray').classList.toggle('solo', solo)
+  $('#soloBtn').hidden = !solo
+  for (const id of ['gifBtn', 'imgBtn', 'textIn', 'sendBtn']) $('#' + id).hidden = !text
+  $('#micBtn').hidden = solo || !allows('v')
+  $('#camBtn').hidden = solo || !allows('c')
+  const gifs = allow === 'g' || (text && G.gifOpen)
+  $('#gifPanel').hidden = !gifs
+  $('#gifBtn').classList.toggle('on', gifs && text)
+  $('#gifBtn').setAttribute('aria-expanded', String(gifs && text))
+  if (gifs && !gifState.loaded) loadGifs()
+  renderSolo()
   updateSend()
   renderSwap()
 }
+
+// The one big button on the voice-only and video-only steps.
+function renderSolo() {
+  const allow = STAGES[G.view.stage].allow, b = $('#soloBtn'), on = !!G.video.local
+  if (allow === 'v') { b.classList.remove('on'); b.replaceChildren(icon('s3'), h('span', {}, t('voice_rec'))) }
+  if (allow === 'c') { b.classList.toggle('on', on); b.replaceChildren(icon(on ? 'camOff' : 's4'), h('span', {}, t(on ? 'cam_stop' : 'cam_on'))) }
+}
+$('#soloBtn').addEventListener('click', () => {
+  if (allows('w')) return
+  if (allows('v')) startRec()
+  else if (allows('c')) G.video.local ? stopVideo() : startVideo()
+})
 function updateSend() { $('#sendBtn').disabled = !$('#textIn').value.trim() }
 
 $('#sendBtn').addEventListener('click', sendText)
@@ -849,7 +838,7 @@ let recStarting = false
 let playing = null      // the voice message playing now: { audio, stop }
 
 async function startRec() {
-  if (!G || G.ended || G.view.stage < 3 || rec || recStarting) return
+  if (!G || G.ended || !allows('v') || rec || recStarting) return
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return toast(t('mic_none'))
   recStarting = true
   playing?.stop()
@@ -861,7 +850,7 @@ async function startRec() {
   catch { recStarting = false; ctx?.close(); return toast(t('mic_denied')) }
   recStarting = false
   const quit = () => { stream.getTracks().forEach(x => x.stop()); ctx?.close() }
-  if (!G || G.ended || G.view.stage < 3) return quit()
+  if (!G || G.ended || !allows('v')) return quit()
   const mimeType = VOICE_TYPES.find(x => MediaRecorder.isTypeSupported?.(x))
   let mr
   try { mr = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 32000 }) }
@@ -941,7 +930,7 @@ async function sendVoice(blob, d, p) {
   addVoice('me', id, URL.createObjectURL(blob), meta)
   if (H) hostCount(0, 'v')
   vibrate(12)
-  try { await net.sendVoice(new Uint8Array(await blob.arrayBuffer()), meta) } catch {}
+  try { await net.sendFile(new Uint8Array(await blob.arrayBuffer()), meta) } catch {}
 }
 
 function onVoice(data, meta) {
@@ -1012,7 +1001,7 @@ const newVideo = () => ({ local: null, remote: null, mic: true, cam: true, them:
 
 async function startVideo() {
   const v = G?.video
-  if (!v || G.ended || G.view.stage < VIDEO || v.local || v.starting) return
+  if (!v || G.ended || !allows('c') || v.local || v.starting) return
   if (!navigator.mediaDevices?.getUserMedia) return toast(t('cam_none'))
   v.starting = true
   stopRec(false)
@@ -1076,10 +1065,10 @@ function onStream(stream) {
 
 function renderVideo() {
   const v = G.video, box = $('#video')
-  const show = G.view.stage >= VIDEO && !!(v.local || v.them.on)
+  const show = allows('c') && !!(v.local || v.them.on)
   box.hidden = !show
-  $('#camBtn').hidden = G.view.stage < VIDEO
   $('#camBtn').classList.toggle('on', !!v.local)
+  renderSolo()
   document.body.classList.toggle('in-call', show)
   const rv = $('#remoteVid'), bg = $('#remoteBg'), lv = $('#localVid')
   if (!show) { rv.srcObject = bg.srcObject = lv.srcObject = null; return }
@@ -1132,6 +1121,93 @@ function fitLocal() {
 }
 $('#localVid').addEventListener('loadedmetadata', fitLocal)
 $('#localVid').addEventListener('resize', fitLocal)
+
+// ---------------------------------------------------------------- photos
+// Sent like voice messages: straight to the other person, nothing is uploaded anywhere. Scaled
+// down and re-encoded first, which also drops hidden details in the file such as where it was
+// taken. The stranger's photos arrive blurred until you tap them.
+
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url })
+    const w = img.naturalWidth, hh = img.naturalHeight
+    if (!w || !hh) throw new Error('empty image')
+    for (const [px, q] of [[IMG_PX, 0.82], [IMG_PX, 0.68], [960, 0.6]]) {
+      const k = Math.min(1, px / Math.max(w, hh)), cw = Math.round(w * k), ch = Math.round(hh * k)
+      const c = h('canvas', { width: cw, height: ch }), x = c.getContext('2d')
+      x.fillStyle = '#fff'
+      x.fillRect(0, 0, cw, ch)
+      x.drawImage(img, 0, 0, cw, ch)
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q))
+      if (blob?.size && blob.size <= IMG_BYTES) return { blob, w: cw, h: ch }
+    }
+    throw new Error('photo too large')
+  } finally { URL.revokeObjectURL(url) }
+}
+
+async function sendPhoto(file) {
+  if (!allows('i') || !G.them || G.ended) return
+  let p
+  try { p = await shrinkPhoto(file) } catch { return toast(t('photo_bad')) }
+  if (!G || G.ended || !allows('i')) return
+  G.lastSend = now()
+  const id = rid(), meta = { k: 'img', id, w: p.w, h: p.h, mime: 'image/jpeg' }
+  addPhoto('me', id, URL.createObjectURL(p.blob), p)
+  if (H) hostCount(0, 'w')
+  vibrate(12)
+  try { await net.sendFile(new Uint8Array(await p.blob.arrayBuffer()), meta) } catch {}
+}
+
+function onPhoto(data, meta) {
+  if (!G || G.ended || typeof meta.id !== 'string') return
+  const size = data?.byteLength ?? data?.size ?? 0
+  if (!size || size > IMG_BYTES) return
+  const id = meta.id.slice(0, 12)
+  net.send({ t: 'ack', id })
+  if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
+  const mime = /^image\/(jpeg|png|webp)$/.test(meta.mime || '') ? meta.mime : 'image/jpeg'
+  addPhoto('them', id, URL.createObjectURL(new Blob([data], { type: mime })), { w: dim(meta.w), h: dim(meta.h) })
+  hopThem()
+  if (H) hostCount(1, 'w')
+}
+
+function addPhoto(who, id, url, { w, h: ph }) {
+  G.urls.push(url)
+  G.textCount++                     // a photo counts as a message
+  countStage('w')
+  const k = Math.min(1, 240 / Math.max(w || 240, ph || 240))
+  const img = h('img', { class: 'photo-img', src: url, alt: '', width: Math.round((w || 240) * k), height: Math.round((ph || 240) * k),
+    onload: () => { const f = $('#feed'); f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' }) } })
+  const hidden = who === 'them'
+  const frame = h('span', { class: 'photo-frame' }, img,
+    h('button', { class: 'photo-open', type: 'button', 'aria-label': t('photo_open'), onclick: e => { e.stopPropagation(); openViewer(url) } }, icon('expand')))
+  const bubble = h('div', { class: `bubble photo${hidden ? ' veiled' : ''}`, 'data-id': id }, frame)
+  if (hidden) {
+    const show = h('button', { class: 'photo-show', type: 'button' }, icon('eye'), h('span', {}, t('photo_show')))
+    frame.append(show)
+    // Registered before the reactions handler in addRow, so the first tap only reveals it.
+    bubble.addEventListener('click', e => {
+      if (!bubble.classList.contains('veiled')) return
+      e.stopImmediatePropagation()
+      bubble.classList.remove('veiled')
+      show.remove()
+    })
+  } else img.addEventListener('click', () => openViewer(url))
+  addRow(who, id, bubble)
+}
+
+function openViewer(url) {
+  $('#viewerImg').src = url
+  $('#viewer').showModal()
+}
+$('#viewer').addEventListener('click', () => $('#viewer').close())
+$('#imgBtn').addEventListener('click', () => $('#imgFile').click())
+$('#imgFile').addEventListener('change', e => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (file) sendPhoto(file)
+})
 
 // ---------------------------------------------------------------- contact swap
 // Each side types a contact and at first only says "ready" ('cx'). A contact ('ch') is sent
@@ -1202,6 +1278,7 @@ function checkReveal() {
     line(themFace(), 'them-face', G.pf?.nm || t('stranger'), s.theirs, true), line(myFace(), 'me-face', t('you'), s.mine)))
   renderSwap()
   renderLadder()
+  renderHint()
   confetti()
   vibrate([30, 50, 30])
 }
@@ -1318,24 +1395,38 @@ function pushFeed(el) {
   requestAnimationFrame(() => feed.scrollTo({ top: feed.scrollHeight, behavior: 'smooth' }))
 }
 
+// An emoji drawn as Google's Noto picture: the still one straight away, swapped for the
+// animated one once it has loaded.
+function notoImg(e, animate) {
+  const code = REACT_CODE[e]
+  const img = h('img', { src: notoStill(code), alt: e, draggable: 'false' })
+  if (animate) { const a = new Image(); a.onload = () => (img.src = a.src); a.src = notoUrl(code) }
+  return img
+}
+
 function openReactions(bubble, id) {
   if (bubble.querySelector('.react.me') || bubble.parentElement.querySelector('.react-pop')) return
-  const pop = h('div', { class: 'react-pop' }, REACTIONS.map(e =>
-    h('button', { type: 'button', onclick: ev => {
+  const pop = h('div', { class: 'react-pop' }, REACTIONS.map(([e]) =>
+    h('button', { type: 'button', 'aria-label': e, onclick: ev => {
       ev.stopPropagation()
       pop.remove()
       if (!G || G.ended) return
       if (addReaction(id, e, 'theirs', 'me')) net.send({ t: 'r', id, e })
-    } }, e)))
+    } }, notoImg(e, false))))
   bubble.after(pop)
-  setTimeout(() => pop.remove(), 4000)
+  setTimeout(() => pop.remove(), 8000)
 }
 
-// whose: which side's bubble ('mine' = a bubble I sent). by: who reacted.
+// whose: which side's bubble ('mine' = a bubble I sent). by: who reacted. The emoji pops up big
+// over the message, then stays small and animated in its corner.
 function addReaction(id, e, whose, by = 'them') {
   const bubble = $('#feed').querySelector(`.row.${whose === 'mine' ? 'me' : 'them'} .bubble[data-id="${CSS.escape(id)}"]`)
   if (!bubble || bubble.querySelector(`.react.${by}`)) return false
-  bubble.append(h('span', { class: `react ${by}` }, e))
+  bubble.append(h('span', { class: `react ${by}` }, notoImg(e, true)))
+  const pop = h('span', { class: 'react-burst', 'aria-hidden': 'true' }, notoImg(e, false))
+  bubble.append(pop)
+  setTimeout(() => pop.remove(), 1200)
+  vibrate(10)
   return true
 }
 

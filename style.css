@@ -225,11 +225,16 @@ body[data-screen="match"] .nav { max-width: 1792px; height: 56px; padding: 0 16p
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; }
 .bubble.big.sent::after, .bubble.has-gif.sent::after { color: var(--muted); margin: 0 0 2px; }
-.react { position: absolute; bottom: -12px; font-size: 13px; line-height: 22px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-xs); animation: in .2s var(--ease); }
+.react { position: absolute; bottom: -12px; display: flex; align-items: center; height: 26px; padding: 0 5px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-xs); animation: in .2s var(--ease); }
 .react.me { right: -4px; }
 .react.them { left: -4px; }
 .react-pop { flex-basis: 100%; display: flex; gap: 2px; margin-left: 38px; padding: 4px; max-width: max-content; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); animation: in .18s var(--ease); }
-.react-pop button { width: 36px; height: 36px; border-radius: 50%; font-size: 19px; transition: background .12s, transform .12s; }
+.react img { display: block; width: 18px; height: 18px; }
+.react-pop button { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; transition: background .12s, transform .12s; }
+.react-pop img { display: block; width: 26px; height: 26px; pointer-events: none; }
+.react-burst { position: absolute; left: 50%; top: 50%; z-index: 2; width: 76px; height: 76px; margin: -38px 0 0 -38px; pointer-events: none; animation: burst 1.15s var(--ease) forwards; }
+.react-burst img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .45)); }
+@keyframes burst { 0% { opacity: 0; transform: scale(.3); } 22% { opacity: 1; transform: scale(1.15); } 60% { opacity: 1; transform: translateY(-14px) scale(1); } 100% { opacity: 0; transform: translateY(-46px) scale(.9); } }
 .react-pop button:hover { background: var(--surface-2); transform: scale(1.12); }
 
 .jinx { align-self: center; text-align: center; min-width: 260px; padding: 16px 20px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); animation: in .3s var(--ease); }
@@ -445,7 +450,7 @@ body.text-open .gif-panel .gif-grid { height: 168px; }
 .need.done { color: var(--success); border-color: color-mix(in srgb, var(--success) 35%, transparent); }
 .need.done .need-dots i { background: var(--success); box-shadow: none; }
 /* The delivered tick sits on the GIF instead of widening the bubble. */
-.bubble.has-gif.sent::after { position: absolute; right: 10px; bottom: 10px; margin: 0; color: #fff; opacity: .9; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
+.bubble.has-gif.sent::after, .bubble.photo.sent::after { position: absolute; right: 10px; bottom: 10px; margin: 0; color: #fff; opacity: .9; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
 .text-in:focus-visible, .gif-search:focus-visible { outline: none; }
 .tray { padding-left: 8px; }
 .consent { align-items: center; flex-wrap: nowrap; animation: pop .3s var(--ease); }
@@ -559,6 +564,31 @@ html[lang="ka"] .lead { font-size: 18px; }
 html[lang="ka"] .jinx-title, html[lang="ka"] .lv-kicker, html[lang="ka"] .pc-kicker { letter-spacing: .01em; }
 html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
 
+/* ---------- voice-only and video-only steps: one big button instead of the text field */
+.tray.solo { padding: 6px; }
+.solo-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 46px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #fff; background: linear-gradient(135deg, var(--me-1), var(--me-2)); box-shadow: 0 8px 22px -10px var(--accent-ring); transition: transform .12s var(--ease), filter .15s; }
+.solo-btn:hover { filter: brightness(1.08); }
+.solo-btn:active { transform: scale(.98); }
+.solo-btn.on { color: var(--text); background: var(--surface-3); box-shadow: none; }
+.solo-btn .ico { width: 20px; height: 20px; }
+
+/* ---------- photos in the chat */
+.bubble.photo { padding: 4px; }
+.photo-frame { position: relative; display: block; overflow: hidden; border-radius: 14px; background: var(--surface-3); }
+.photo-img { display: block; max-width: min(240px, 60vw); max-height: 320px; width: auto; height: auto; object-fit: cover; transition: filter .3s var(--ease), transform .3s var(--ease); }
+.row.me .photo-img { cursor: zoom-in; }
+.bubble.photo.veiled .photo-img { filter: blur(24px) saturate(.6); transform: scale(1.15); }
+.photo-show { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; color: #fff; background: rgba(9, 9, 11, .6); border: 1px solid rgba(255, 255, 255, .22); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.photo-show .ico { width: 16px; height: 16px; }
+.photo-open { position: absolute; right: 6px; top: 6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(9, 9, 11, .55); opacity: 0; transition: opacity .15s; }
+.photo-open .ico { width: 14px; height: 14px; }
+.bubble.photo:hover .photo-open, .photo-open:focus-visible { opacity: 1; }
+.bubble.photo.veiled .photo-open { display: none; }
+@media (hover: none) { .photo-open { opacity: 1; } }
+.viewer { max-width: 100vw; max-height: 100dvh; padding: 0; border: 0; background: transparent; overflow: visible; }
+.viewer::backdrop { background: rgba(0, 0, 0, .86); }
+.viewer img { display: block; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); border-radius: 12px; cursor: zoom-out; }
+
 /* ---------- my profile */
 .profile { width: min(400px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 20px; border-radius: 18px; border: 1px solid var(--border-2); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); overflow-y: auto; }
 .profile[open] { display: flex; flex-direction: column; gap: 16px; animation: pop .25s var(--ease); }
@@ -632,6 +662,9 @@ html[lang="ka"] .lv-name, html[lang="ka"] .pc-end { letter-spacing: 0; }
   .gif-panel .gif-grid { grid-auto-rows: 72px; }
   .gif-panel .gif img { height: 72px; }
   .bubble.voice { min-width: 0; width: 240px; max-width: 82%; }
+  .react-pop { gap: 0; margin-left: 30px; }
+  .react-pop button { width: 34px; height: 34px; }
+  .react-pop img { width: 24px; height: 24px; }
   .swap-form .btn { padding: 0 12px; }
   .pc-stats .stat b { font-size: 19px; }
   .video { margin: 8px 12px 0; height: 36vh; border-radius: 14px; }

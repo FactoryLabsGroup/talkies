@@ -7,7 +7,7 @@ export const LANGS = ['en', 'ka']
 export const STR = {
   en: {
     tagline: 'Meet a stranger. Earn your words.',          // landing headline
-    lead: 'Start with GIFs. Words, voice, video and contacts open up step by step, if you both want them.', // landing, under the headline
+    lead: 'Start with GIFs. More opens up step by step, if you both want it.', // landing, under the headline
     find: 'Find a stranger',                               // landing, main button
     online_other: '{n} people here now',                   // landing + search, {n} = count (2 or more)
     adults: 'For adults only (18+)',                       // landing, under the buttons
@@ -26,39 +26,23 @@ export const STR = {
     cancel: 'Cancel',
     connecting: 'Connecting…',                             // match, before the hello arrives
     intro_title: 'You’re connected',                       // match, welcome card title
-    intro_hint: 'GIFs only for now. You can switch to text in {n} seconds if you each send at least {g} GIFs', // welcome card, {n} = seconds, {g} = GIFs per person
+    intro_hint: 'GIFs only for now. What opens next is a surprise.', // welcome card
     you: 'You',
     next: 'Next',                                          // match, skip button (phone)
     next_stranger: 'Next stranger',
     stranger: 'Stranger',
 
-    // The five steps: name, what it is, and the line shown while it's still locked.
+    // The five steps: name and what you can send on it. Only steps reached so far are shown.
     s1: 'Wordless', d1: 'GIFs only',
-    s2: 'In words', d2: 'Text and GIFs', u2: 'Unlocks text',
-    s3: 'By voice', d3: 'Voice messages', u3: 'Unlocks voice messages',
-    s4: 'Face to face', d4: 'Video call', u4: 'Unlocks video call',
-    s5: 'Introduced', d5: 'Swap contacts', u5: 'Unlocks contact swap',
+    s2: 'In words', d2: 'Text, GIFs and photos',
+    s3: 'By voice', d3: 'Voice messages only',
+    s4: 'Face to face', d4: 'Video call only',
+    s5: 'Introduced', d5: 'Everything’s open, and you can swap contacts',
     // A finished step in the sidebar, {n} = messages of that kind sent in it by both of you
     done_1: '{n} GIFs', done_1_one: '1 GIF',
     done_2: '{n} messages', done_2_one: '1 message',
     done_3: '{n} voice messages', done_3_one: '1 voice message',
     done_4: 'You saw each other', done_4_none: 'Without video',
-    // Sidebar card on the current step, {n} = how many each person sends
-    need_1: 'To text: {n} GIFs each', need_1_one: 'To text: 1 GIF each',
-    need_2: 'To voice: {n} messages each', need_2_one: 'To voice: 1 message each',
-    need_3: 'To video: {n} voice messages each', need_3_one: 'To video: 1 voice message each',
-    need_4: 'Then you can swap contacts',
-    time: 'Time',                                          // sidebar card, next to the countdown
-    // Match header hint while the countdown runs, {time} = m:ss
-    in_1: 'Text in {time}', in_2: 'Voice in {time}', in_3: 'Video in {time}', in_4: 'Contacts in {time}',
-    // Match header hint when time is up but I still have to send some, {n} = how many more
-    more_1: 'Send {n} more GIFs to unlock text', more_1_one: 'Send 1 more GIF to unlock text',
-    more_2: 'Send {n} more messages to unlock voice', more_2_one: 'Send 1 more message to unlock voice',
-    more_3: 'Send {n} more voice messages to unlock video', more_3_one: 'Send a voice message to unlock video',
-    // ...when it's the stranger who still has to send some
-    wait_1: 'Waiting for the stranger’s GIFs', wait_2: 'Waiting for the stranger’s messages', wait_3: 'Waiting for the stranger’s voice message',
-    // ...when the next step can be opened
-    ready_1: 'You can switch to text now', ready_2: 'You can turn on voice messages now', ready_3: 'You can turn on video now', ready_4: 'You can swap contacts now',
     // Consent bar above the composer
     ask_1: 'Switch to text? You both have to agree',
     ask_2: 'Turn on voice messages? You both have to agree',
@@ -77,6 +61,7 @@ export const STR = {
 
     // Voice messages
     voice_btn: 'Record a voice message',                   // mic button (screen readers)
+    voice_rec: 'Record a voice message',                   // the one big button on the voice-only step
     play: 'Play',
     mic_denied: 'Microphone access is off. Turn it on in your browser settings',
     mic_none: 'Voice messages don’t work in this browser',
@@ -90,10 +75,17 @@ export const STR = {
     video_show: 'Show video',                              // button on their blurred video
     video_wait: 'Their camera is off',                     // video area, they haven't turned it on
     cam_off_them: 'They turned their camera off',          // video area, they paused the camera
-    cam_on: 'Turn on camera',                              // video area, when only they are on
+    cam_on: 'Turn on camera',                              // video area and the big button on the video-only step
+    cam_stop: 'Turn off camera',                           // big button on the video-only step while the camera is on
     mute: 'Microphone', cam_toggle: 'Camera', hang_up: 'End video', // call controls (screen readers)
     cam_denied: 'Camera access is off. Turn it on in your browser settings',
     cam_none: 'Video calls don’t work in this browser',
+
+    // Photos in the chat
+    photo_btn: 'Send a photo',                             // photo button in the composer (screen readers)
+    photo_show: 'Show photo',                              // on the stranger's blurred photo
+    photo_open: 'Open photo',                              // expand button on a photo (screen readers)
+    photo_bad: 'Couldn’t send that image. Try another one',
 
     // Contact swap (last step)
     swap_title: 'Share your contact',
@@ -131,7 +123,7 @@ export const STR = {
   },
   ka: {
     tagline: 'გაიცანით უცნობი. დაიმსახურეთ სიტყვები.',
-    lead: 'დაიწყეთ GIF‑ებით. სიტყვები, ხმა, ვიდეო და კონტაქტები თანდათან გაიხსნება, თუ ორივეს მოგინდებათ.',
+    lead: 'დაიწყეთ GIF‑ებით. დანარჩენი თანდათან გაიხსნება, თუ ორივეს მოგინდებათ.',
     find: 'უცნობის პოვნა',
     online_other: 'ახლა აქ {n} ადამიანია',
     adults: 'მხოლოდ სრულწლოვნებისთვის (18+)',
@@ -150,33 +142,21 @@ export const STR = {
     cancel: 'გაუქმება',
     connecting: 'დაკავშირება…',
     intro_title: 'დაკავშირდით',
-    intro_hint: 'ჯერ მხოლოდ GIF‑ები. ტექსტზე გადასვლა {n} წამში შეგეძლებათ, თუ ორივე მინიმუმ {g} GIF‑ს გაგზავნით',
+    intro_hint: 'ჯერ მხოლოდ GIF‑ები. რა გაიხსნება შემდეგ, სიურპრიზია.',
     you: 'თქვენ',
     next: 'შემდეგი',
     next_stranger: 'შემდეგი უცნობი',
     stranger: 'უცნობი',
 
     s1: 'უხმოდ', d1: 'მხოლოდ GIF‑ები',
-    s2: 'სიტყვებით', d2: 'ტექსტი და GIF‑ები', u2: 'გაიხსნება ტექსტი',
-    s3: 'ხმით', d3: 'ხმოვანი შეტყობინებები', u3: 'გაიხსნება ხმოვანი შეტყობინებები',
-    s4: 'პირისპირ', d4: 'ვიდეოზარი', u4: 'გაიხსნება ვიდეოზარი',
-    s5: 'გაცნობა', d5: 'კონტაქტების გაცვლა', u5: 'გაიხსნება კონტაქტების გაცვლა',
+    s2: 'სიტყვებით', d2: 'ტექსტი, GIF‑ები და სურათები',
+    s3: 'ხმით', d3: 'მხოლოდ ხმოვანი შეტყობინებები',
+    s4: 'პირისპირ', d4: 'მხოლოდ ვიდეოზარი',
+    s5: 'გაცნობა', d5: 'ყველაფერი ღიაა და კონტაქტების გაცვლაც შეგიძლიათ',
     done_1: '{n} GIF',
     done_2: '{n} შეტყობინება',
     done_3: '{n} ხმოვანი',
     done_4: 'ერთმანეთი დაინახეთ', done_4_none: 'ვიდეოს გარეშე',
-    need_1: 'ტექსტამდე: ორივემ {n} GIF',
-    need_2: 'ხმამდე: ორივემ {n} შეტყობინება',
-    need_3: 'ვიდეომდე: ორივემ {n} ხმოვანი',
-    need_4: 'შემდეგ კონტაქტების გაცვლა შეგეძლებათ',
-    time: 'დრო',
-    in_1: 'ტექსტამდე {time}', in_2: 'ხმამდე {time}', in_3: 'ვიდეომდე {time}', in_4: 'კონტაქტებამდე {time}',
-    more_1: 'ტექსტის გასახსნელად გაგზავნეთ კიდევ {n} GIF',
-    more_2: 'ხმის გასახსნელად გაგზავნეთ კიდევ {n} შეტყობინება',
-    more_3: 'ვიდეოს გასახსნელად გაგზავნეთ კიდევ {n} ხმოვანი',
-    more_3_one: 'ვიდეოს გასახსნელად გაგზავნეთ ხმოვანი შეტყობინება',
-    wait_1: 'უცნობის GIF‑ებს ველოდებით', wait_2: 'უცნობის შეტყობინებებს ველოდებით', wait_3: 'უცნობის ხმოვანს ველოდებით',
-    ready_1: 'უკვე შეგიძლიათ ტექსტზე გადასვლა', ready_2: 'უკვე შეგიძლიათ ხმოვანი შეტყობინებების ჩართვა', ready_3: 'უკვე შეგიძლიათ ვიდეოს ჩართვა', ready_4: 'უკვე შეგიძლიათ კონტაქტების გაცვლა',
     ask_1: 'გადავიდეთ ტექსტზე? საჭიროა ორივეს თანხმობა',
     ask_2: 'ჩავრთოთ ხმოვანი შეტყობინებები? საჭიროა ორივეს თანხმობა',
     ask_3: 'ჩავრთოთ ვიდეო? საჭიროა ორივეს თანხმობა',
@@ -193,6 +173,7 @@ export const STR = {
     send: 'გაგზავნა', react: 'რეაქცია',
 
     voice_btn: 'ხმოვანი შეტყობინების ჩაწერა',
+    voice_rec: 'ხმოვანის ჩაწერა',
     play: 'მოსმენა',
     mic_denied: 'მიკროფონზე წვდომა გამორთულია. ჩართეთ ბრაუზერის პარამეტრებში',
     mic_none: 'ამ ბრაუზერში ხმოვანი შეტყობინებები არ მუშაობს',
@@ -206,9 +187,15 @@ export const STR = {
     video_wait: 'უცნობის კამერა გამორთულია',
     cam_off_them: 'უცნობმა კამერა გამორთო',
     cam_on: 'კამერის ჩართვა',
+    cam_stop: 'კამერის გამორთვა',
     mute: 'მიკროფონი', cam_toggle: 'კამერა', hang_up: 'ვიდეოს დასრულება',
     cam_denied: 'კამერაზე წვდომა გამორთულია. ჩართეთ ბრაუზერის პარამეტრებში',
     cam_none: 'ამ ბრაუზერში ვიდეოზარი არ მუშაობს',
+
+    photo_btn: 'სურათის გაგზავნა',
+    photo_show: 'სურათის ჩვენება',
+    photo_open: 'სურათის გახსნა',
+    photo_bad: 'სურათი ვერ გაიგზავნა. სცადეთ სხვა',
 
     swap_title: 'გაუზიარეთ კონტაქტი',
     swap_sub: 'ორივე კონტაქტი ერთდროულად გამოჩნდება',

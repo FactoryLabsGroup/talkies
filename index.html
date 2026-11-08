@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=17">
-  <script type="module" src="app.js?v=17"></script>
+  <link rel="stylesheet" href="style.css?v=18">
+  <script type="module" src="app.js?v=18"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -123,13 +123,11 @@
             <div class="chip"><span class="ava them-face"></span><span class="them-info"></span></div>
             <button class="btn secondary sm next-btn" type="button"><span data-i="next"></span><span class="ico" data-icon="skip"></span></button>
           </div>
-          <div class="fuse mobile-only"><div class="fuse-fill"></div></div>
           <div class="stage-head">
             <div>
               <p id="stageTitle" class="stage-title"></p>
               <p id="meterText" class="hint"></p>
             </div>
-            <div id="gifNeed" class="gif-need"></div>
           </div>
         </div>
         <div id="video" class="video" hidden>
@@ -160,10 +158,13 @@
           </div>
           <div id="tray" class="tray" hidden>
             <button id="gifBtn" class="gif-btn" type="button" aria-label="GIF" aria-expanded="false">GIF</button>
+            <button id="imgBtn" class="mic-btn" type="button" data-aria="photo_btn"><span class="ico" data-icon="image"></span></button>
+            <input id="imgFile" type="file" accept="image/*" hidden>
             <button id="micBtn" class="mic-btn" type="button" data-aria="voice_btn" hidden><span class="ico" data-icon="s3"></span></button>
             <button id="camBtn" class="mic-btn" type="button" data-aria="video_btn" hidden><span class="ico" data-icon="s4"></span></button>
             <input id="textIn" class="text-in" type="text" autocomplete="off" enterkeyhint="send" maxlength="300" data-ph="free_ph">
             <button id="sendBtn" class="send" type="button" disabled aria-label="Send"><span class="ico" data-icon="send"></span></button>
+            <button id="soloBtn" class="solo-btn" type="button" hidden></button>
           </div>
           <div id="rec" class="tray rec" hidden>
             <button id="recCancel" class="mic-btn" type="button" data-aria="cancel"><span class="ico" data-icon="x"></span></button>
@@ -217,6 +218,7 @@
   <p class="pf-note" data-i="pf_note"></p>
   <button class="btn primary block" type="button" data-i="pf_done" data-close></button>
 </dialog>
+<dialog id="viewer" class="viewer"><img id="viewerImg" alt=""></dialog>
 <div id="confetti" class="confetti" aria-hidden="true"></div>
 <div id="toast" class="toast" role="status" hidden></div>
 </body>

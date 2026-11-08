@@ -5,10 +5,12 @@ Meet a stranger. Earn your words. Live at **https://factorylabs.app/talkies/**
 Two random strangers climb five steps, and each step needs both of them to agree:
 
 1. **Wordless:** GIFs only. After a minute, once each has sent 3 GIFs, they can switch to text.
-2. **In words:** text and GIFs. After 90 seconds, once each has sent 5 messages, they can turn on voice.
-3. **By voice:** voice messages, recorded in the browser and sent peer to peer. After 45 seconds, once each has sent one, they can turn on video.
-4. **Face to face:** video call. Nobody's camera turns on by itself, and the other person's video stays blurred until you tap it, again every time their camera comes back. After a minute they can swap contacts, with or without video.
-5. **Introduced:** each types a contact (Instagram, Telegram…). Nothing is sent until both have entered theirs, then both appear at the same time.
+2. **In words:** text, GIFs and photos. Photos go peer to peer and arrive blurred until tapped. After 90 seconds, once each has sent 5 messages, they can turn on voice.
+3. **By voice:** voice messages only, no typing. After 45 seconds, once each has sent one, they can turn on video.
+4. **Face to face:** video call only. Nobody's camera turns on by itself, and the other person's video stays blurred until you tap it, again every time their camera comes back. After a minute they can swap contacts, with or without video.
+5. **Introduced:** everything is open again, and each can type a contact (Instagram, Telegram…). Nothing is sent until both have entered theirs, then both appear at the same time.
+
+Players don't see the timers or the steps ahead: the sidebar lists only the steps reached so far, and the consent bar names the next step once it can be opened.
 
 The numbers live in `STAGES` at the top of `app.js`.
 
