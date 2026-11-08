@@ -6,7 +6,7 @@
 // own action, as binary data with a small metadata object.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=14'
+import { CONFIG } from './config.js?v=15'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000

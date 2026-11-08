@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=14'
-import { STR, LANGS } from './i18n.js?v=14'
-import { Net } from './net.js?v=14'
+import { CONFIG } from './config.js?v=15'
+import { STR, LANGS } from './i18n.js?v=15'
+import { Net } from './net.js?v=15'
 
 // Talkies: two strangers climb four steps: GIFs only, then words, then voice messages, then
 // swapping contacts. A step opens once enough time has passed and both have sent enough of the
@@ -22,7 +22,6 @@ const TEXT_MAX = 300
 const VOICE_MAX = 30000          // longest voice message, ms
 const VOICE_BYTES = 800 * 1024   // and the largest file accepted
 const CONTACT_MAX = 40
-const AVATARS_HUE = () => Math.floor(Math.random() * 360)
 const REACTIONS = ['❤️', '😂', '😮', '👀']
 // Quick GIF searches. The label is shown in the player's language; the search runs in English,
 // where GIPHY has the best results.
@@ -112,6 +111,81 @@ function localTime(tz) {
   } catch { return '' }
 }
 
+// ---------------------------------------------------------------- avatars
+// A small face drawn from a seed: a background, a tilted rounded shape, eyes that blink and a
+// mouth. Each person sends their seed in the hello, so both screens draw the same two faces.
+
+const AVA_PALETTES = [
+  ['#FF7A59', '#FFC145', '#2EC4B6', '#8B7CFF', '#F25F5C'],
+  ['#8B7CFF', '#FF8FAB', '#FFD166', '#06D6A0', '#4CC9F0'],
+  ['#F94144', '#F9C74F', '#90BE6D', '#43AA8B', '#577590'],
+  ['#FF9F1C', '#FFBF69', '#CBF3F0', '#2EC4B6', '#E76F51'],
+  ['#B8F2E6', '#FFA69E', '#FAF3DD', '#AED9E0', '#9381FF'],
+  ['#F72585', '#B5179E', '#4CC9F0', '#FFD60A', '#7209B7'],
+]
+const mySeed = rid() + rid()            // my face for as long as the page is open
+const DEMO_SEEDS = ['k1', 'q8']         // the two faces in the landing demo
+
+// Same seed, same numbers: a tiny seeded random generator.
+function seeded(seed) {
+  let a = 1779033703 ^ seed.length
+  for (let i = 0; i < seed.length; i++) { a = Math.imul(a ^ seed.charCodeAt(i), 3432918353); a = a << 13 | a >>> 19 }
+  return () => {
+    a = a + 0x6D2B79F5 | 0
+    let x = Math.imul(a ^ a >>> 15, 1 | a)
+    x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x
+    return ((x ^ x >>> 14) >>> 0) / 4294967296
+  }
+}
+
+function faceSvg(seed) {
+  const r = seeded(seed)
+  const pal = AVA_PALETTES[Math.floor(r() * AVA_PALETTES.length)].slice()
+  for (let i = pal.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pal[i], pal[j]] = [pal[j], pal[i]] }
+  const [bg, skin] = pal
+  const n = parseInt(skin.slice(1), 16)
+  const ink = (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255 > 0.55 ? '#141418' : '#fff'
+  const f = x => +x.toFixed(1)
+  const tx = f((r() - 0.5) * 16), ty = f((r() - 0.5) * 14), rot = f((r() - 0.5) * 40), rx = f(12 + r() * 24)
+  const fx = f(tx * 0.6), fy = f(ty * 0.5 + 4), frot = f((r() - 0.5) * 16)
+  const gap = f(9 + r() * 4), round = r() > 0.4, open = r() > 0.5, delay = f(r() * 5)
+  const eyes = round
+    ? `<circle cx="${f(40 - gap)}" cy="35" r="4"/><circle cx="${f(40 + gap)}" cy="35" r="4"/>`
+    : `<rect x="${f(38 - gap)}" y="30" width="4" height="10" rx="2"/><rect x="${f(38 + gap)}" y="30" width="4" height="10" rx="2"/>`
+  const mouth = open
+    ? `<path d="M31 47Q40 ${f(58 + r() * 3)} 49 47Z"/>`
+    : `<path d="M32 48Q40 ${f(53 + r() * 4)} 48 48" fill="none" stroke="${ink}" stroke-width="3.5" stroke-linecap="round"/>`
+  return {
+    color: skin,
+    svg: `<svg viewBox="0 0 80 80" aria-hidden="true"><rect width="80" height="80" fill="${bg}"/>` +
+      `<rect x="10" y="10" width="60" height="60" rx="${rx}" fill="${skin}" transform="translate(${tx} ${ty}) rotate(${rot} 40 40) translate(40 40) scale(1.15) translate(-40 -40)"/>` +
+      `<g fill="${ink}" transform="translate(${fx} ${fy}) rotate(${frot} 40 40)"><g class="eyes" style="animation-delay:-${delay}s">${eyes}</g>${mouth}</g></svg>`,
+  }
+}
+
+const faces = new Map()
+function paintAva(el, seed) {
+  if (!seed) { el.replaceChildren(); el.style.removeProperty('--glow'); return el }
+  if (!faces.has(seed)) faces.set(seed, faceSvg(seed))
+  const face = faces.get(seed)
+  el.innerHTML = face.svg
+  el.style.setProperty('--glow', face.color)
+  return el
+}
+const ava = (seed, cls) => paintAva(h('span', { class: cls ? `ava ${cls}` : 'ava' }), seed)
+const themSeed = () => G?.them?.av || ''
+
+// The stranger's face gives a little hop when something from them arrives.
+function hopThem() {
+  document.querySelectorAll('#match .stranger .ava, #match .chip .ava').forEach(el => {
+    el.classList.remove('hop')
+    void el.offsetWidth
+    el.classList.add('hop')
+    clearTimeout(el.hopT)
+    el.hopT = setTimeout(() => el.classList.remove('hop'), 600)
+  })
+}
+
 // ---------------------------------------------------------------- language
 
 let lang = (() => {
@@ -190,7 +264,7 @@ function startDemo() {
           bars.forEach((b, i) => b.classList.toggle('on', i < step.unlock))
           feed.append(h('div', { class: 'demo-unlock' }, icon('s' + step.unlock), `${t('unlocked')} · ${t('s' + step.unlock)}`))
         } else if (step.typing) {
-          feed.append(h('div', { class: 'row them' }, h('span', { class: 'ava', style: '--hue: 300' }),
+          feed.append(h('div', { class: 'row them' }, ava(DEMO_SEEDS[1]),
             h('div', { class: 'bubble demo-typing' }, h('i'), h('i'), h('i'))))
         } else feed.append(demoRow(step))
         while (feed.children.length > 8) feed.firstElementChild.remove()
@@ -208,7 +282,7 @@ function demoRow({ who, gif, w, h: gh, text, voice }) {
     ? h('div', { class: 'bubble has-gif' }, h('img', { class: 'gif-msg', src: gif, width: Math.round(w * height / gh), height, alt: '', referrerpolicy: 'no-referrer' }))
     : voice ? h('div', { class: 'bubble voice' }, h('span', { class: 'vplay' }, icon('play')), wave(DEMO_WAVE), h('span', { class: 'vtime' }, clock(voice * 1000)))
     : h('div', { class: 'bubble' }, h('span', {}, text[lang]))
-  return h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: '--hue: 300' }), bubble)
+  return h('div', { class: `row ${who}` }, who === 'them' && ava(DEMO_SEEDS[1]), bubble)
 }
 
 let online = 1
@@ -333,7 +407,7 @@ function startMatch(partner, isHost) {
   stopSearchUi()
   clearTimeout(joinTimer)
   G = {
-    partner, host: isHost, them: null, theyGotMine: false, ended: false, hue: AVATARS_HUE(),
+    partner, host: isHost, them: null, theyGotMine: false, ended: false,
     view: { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0] },
     leftEnd: now() + STAGES[1].time, startedAt: now(), connectedAt: 0, maxStage: 1,
     gifs: [], gifCount: 0, textCount: 0, voiceCount: 0, stageCnt: STAGES.map(() => 0),
@@ -345,7 +419,7 @@ function startMatch(partner, isHost) {
   $('#feed').replaceChildren()
   $('#swap').replaceChildren()
   $('#textIn').value = ''
-  document.querySelectorAll('#match .ava').forEach(el => el.style.setProperty('--hue', G.hue))
+  document.querySelectorAll('#match .stranger .ava, #match .chip .ava').forEach(el => paintAva(el, ''))
   document.querySelectorAll('#match .them-info').forEach(el => (el.textContent = ''))
   $('#connecting').hidden = false
   show('match')
@@ -353,7 +427,7 @@ function startMatch(partner, isHost) {
 
   const hello = () => {
     if (G.them && G.theyGotMine) return
-    net.send({ t: 'hi', lang, tz: myTz, cc: myRegion, got: !!G.them })
+    net.send({ t: 'hi', lang, tz: myTz, cc: myRegion, av: mySeed, got: !!G.them })
   }
   hello()
   G.timers.push(setInterval(hello, 800))
@@ -409,10 +483,12 @@ function onGame(m) {
   switch (m.t) {
     case 'hi': {
       const first = !G.them
-      G.them = { lang: LANGS.includes(m.lang) ? m.lang : 'en', tz: String(m.tz || '').slice(0, 40), cc: String(m.cc || '').slice(0, 2) }
+      const av = String(m.av || '').replace(/[^a-z0-9]/gi, '').slice(0, 24) || G.partner
+      G.them = { lang: LANGS.includes(m.lang) ? m.lang : 'en', tz: String(m.tz || '').slice(0, 40), cc: String(m.cc || '').slice(0, 2), av: G.them?.av || av }
       if (m.got) G.theyGotMine = true
       if (first) {
-        net.send({ t: 'hi', lang, tz: myTz, cc: myRegion, got: true })
+        net.send({ t: 'hi', lang, tz: myTz, cc: myRegion, av: mySeed, got: true })
+        document.querySelectorAll('#match .stranger .ava, #match .chip .ava').forEach(el => paintAva(el, G.them.av))
         $('#connecting').hidden = true
         G.connectedAt = now()
         G.leftEnd = now() + STAGES[1].time
@@ -432,6 +508,7 @@ function onGame(m) {
       net.send({ t: 'ack', id })
       if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
       addBubble('them', id, tk)
+      hopThem()
       if (H) hostCount(1, tk[0].k)
       break
     }
@@ -606,7 +683,7 @@ function addIntro() {
   const { tz, cc } = G.them
   const time = localTime(tz)
   pushFeed(h('div', { class: 'intro' },
-    h('div', { class: 'intro-orbs' }, h('span', { class: 'ava you' }), h('span', { class: 'intro-link' }), h('span', { class: 'ava', style: `--hue:${G.hue}` })),
+    h('div', { class: 'intro-orbs' }, ava(mySeed, 'you'), h('span', { class: 'intro-link' }), ava(themSeed())),
     h('p', { class: 'intro-title' }, t('intro_title')),
     h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'}${time ? ' · ' + time : ''}`),
     h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(STAGES[1].time / 1000), g: STAGES[1].need }))))
@@ -805,6 +882,7 @@ function onVoice(data, meta) {
   const d = Math.max(0.5, Math.min(VOICE_MAX / 1000 + 1, +meta.d || 0))
   const p = (Array.isArray(meta.p) ? meta.p : []).slice(0, 48).map(x => Math.max(0, Math.min(100, Math.round(+x || 0))))
   addVoice('them', id, URL.createObjectURL(new Blob([data], { type: mime.split(';')[0] })), { d, p, mime })
+  hopThem()
   if (H) hostCount(1, 'v')
 }
 
@@ -915,11 +993,11 @@ function checkReveal() {
   const s = G.swap
   if (s.done || !s.mine || !s.theirs || !s.sentMine) return
   s.done = true
-  const line = (who, v, copy) => h('div', { class: 'swap-line' }, h('span', { class: 'who' }, who), h('b', {}, v),
+  const line = (seed, who, v, copy) => h('div', { class: 'swap-line' }, ava(seed), h('span', { class: 'who' }, who), h('b', {}, v),
     copy && h('button', { class: 'copy', type: 'button', onclick: e => copyText(v, e.currentTarget) }, t('copy')))
   pushFeed(h('div', { class: 'swap-card' },
     h('p', { class: 'swap-card-title' }, icon('s4'), t('swapped')),
-    line(t('stranger'), s.theirs, true), line(t('you'), s.mine)))
+    line(themSeed(), t('stranger'), s.theirs, true), line(mySeed, t('you'), s.mine)))
   renderSwap()
   renderLadder()
   confetti()
@@ -1021,7 +1099,7 @@ function addBubble(who, id, tk) {
 function countStage(kind) { if (STAGES[G.view.stage].kind === kind) G.stageCnt[G.view.stage]++ }
 
 function addRow(who, id, bubble) {
-  const row = h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: `--hue:${G.hue}` }), bubble)
+  const row = h('div', { class: `row ${who}` }, who === 'them' && ava(themSeed()), bubble)
   if (who === 'them') {
     bubble.tabIndex = 0
     bubble.setAttribute('role', 'button')
@@ -1103,9 +1181,9 @@ function renderPostcard(why) {
     h('p', { class: 'pc-kicker' }, t('the_end')),
     h('p', { class: 'pc-end' }, t('end_' + why)),
     h('div', { class: 'pc-pair' },
-      h('span', { class: 'ava you' }),
+      ava(mySeed, 'you'),
       h('span', { class: 'pc-amp' }, '+'),
-      h('span', { class: 'ava', style: `--hue:${G.hue}` }),
+      ava(themSeed()),
       h('span', { class: 'pc-flag' }, flagOf(G.them?.cc) || '🌍')),
     h('div', { class: 'pc-stage' },
       h('span', { class: 'lv-ico' }, icon('s' + G.maxStage)),
@@ -1122,6 +1200,7 @@ const stat = (n, label) => h('div', { class: 'stat' }, h('b', {}, String(n)), h(
 // ---------------------------------------------------------------- boot
 
 hydrateIcons()
+document.querySelectorAll('.demo-avas .ava').forEach((el, i) => paintAva(el, DEMO_SEEDS[i]))
 applyLang()
 const inviteCode = new URLSearchParams(location.search).get('invite')
 if (/^[a-z0-9]{6,20}$/.test(inviteCode || '')) joinInvite(inviteCode)
