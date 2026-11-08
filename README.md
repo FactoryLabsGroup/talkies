@@ -21,7 +21,7 @@ Everyone can set a name, a gender and a photo from the profile button at the top
 ## How it works
 
 - Static site, no build step and no backend. GitHub Pages serves it as is.
-- Players connect browser to browser over WebRTC ([Trystero](https://github.com/dmotz/trystero), bundled in `vendor/`). Public Nostr relays are used only to find each other. The bundled copy has one change: it leaves its rooms on `pagehide` instead of `beforeunload`, so cancelling the browser's "Leave site?" question doesn't cut the stranger off. Keep that change if you update the file. On top of that, both sides send a small "still here" every 3 seconds, and a chat that hears nothing from the other side for 30 seconds ends on both sides.
+- Players connect browser to browser over WebRTC ([Trystero](https://github.com/dmotz/trystero), bundled in `vendor/`). Public Nostr relays are used only to find each other. The bundled copy has one change: it leaves its rooms on `pagehide` instead of `beforeunload`, so cancelling the browser's "Leave site?" question doesn't cut the stranger off. Keep that change if you update the file. On top of that, both sides send a small "still here" every 3 seconds, and a chat that hears nothing from the other side for 2 minutes ends on both sides.
 - English and Georgian, picked from the browser language, with a toggle on the landing page.
 
 ## Files

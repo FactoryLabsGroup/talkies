@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=21'
-import { STR, LANGS } from './i18n.js?v=21'
-import { Net } from './net.js?v=21'
+import { CONFIG } from './config.js?v=22'
+import { STR, LANGS } from './i18n.js?v=22'
+import { Net } from './net.js?v=22'
 
 // Talkies: two strangers climb five steps: GIFs only, then words, voice messages only, a video
 // call only, and finally everything at once plus swapping contacts. A step opens once enough time
@@ -30,7 +30,7 @@ const IMG_PX = 1280                // photos in the chat are scaled down to this
 const IMG_BYTES = 700 * 1024       // and the largest photo accepted
 const SOON_MS = 20000              // the "?" step starts moving this long before it can open
 const BEAT_MS = 3000               // both sides say "still here" this often
-const LOST_MS = 30000              // and a chat with nothing heard for this long is over
+const LOST_MS = 120000             // and a chat with nothing heard for this long is over
 // Reactions: the emoji and the code of its picture in Google's Noto set (still and animated).
 const REACTIONS = [['❤️', '2764_fe0f'], ['😂', '1f602'], ['🔥', '1f525'], ['😭', '1f62d'], ['💀', '1f480'], ['🥹', '1f979'], ['🫶', '1faf6'], ['👀', '1f440']]
 const REACT_CODE = Object.fromEntries(REACTIONS)
