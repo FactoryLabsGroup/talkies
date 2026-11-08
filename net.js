@@ -2,10 +2,11 @@
 // Everyone on the site sits in one lobby room. People who are searching pair up with a
 // three-step handshake: propose → accept → confirm. Game messages then go only to the partner.
 // Private invites skip the lobby: both people join a room named after a secret code from the
-// link, and whoever shows up there first becomes the partner.
+// link, and whoever shows up there first becomes the partner. Voice messages go through their
+// own action, as binary data with a small metadata object.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=13'
+import { CONFIG } from './config.js?v=14'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000
@@ -16,7 +17,7 @@ const nonce = () => Math.random().toString(36).slice(2, 10)
 
 export class Net {
   constructor(handlers) {
-    this.h = handlers          // { onCount(n), onMatch(partnerId, isHost), onGame(msg), onPartnerGone() }
+    this.h = handlers          // { onCount(n), onMatch(partnerId, isHost), onGame(msg), onVoice(data, meta), onPartnerGone() }
     this.id = selfId
     this.status = 'idle'
     this.peers = new Map()     // peerId → status
@@ -28,6 +29,7 @@ export class Net {
     this.timer = null
     this.priv = null           // private invite room { room, g }
     this.game = null           // the action game messages go through (lobby or private)
+    this.voice = null          // and the one voice messages go through
   }
 
   start() {
@@ -39,6 +41,7 @@ export class Net {
     this.st = this.room.makeAction('st')
     this.mm = this.room.makeAction('mm')
     this.g = this.game = this.room.makeAction('g')
+    this.v = this.voice = this.room.makeAction('v')
 
     this.room.onPeerJoin = id => {
       this.peers.set(id, 'idle')
@@ -60,6 +63,11 @@ export class Net {
     }
     this.mm.onMessage = (m, { peerId }) => this.onHandshake(m, peerId)
     this.g.onMessage = (m, { peerId }) => this.receive(m, peerId, this.g)
+    this.v.onMessage = (d, { peerId, metadata }) => this.receiveVoice(d, metadata, peerId, this.v)
+  }
+
+  receiveVoice(data, meta, peerId, via) {
+    if (peerId === this.partner && via === this.voice) this.h.onVoice?.(data, meta)
   }
 
   receive(m, peerId, via) {
@@ -73,9 +81,10 @@ export class Net {
     this.stopSearch()
     this.setStatus('busy')
     const room = joinRoom(this.cfg, 'invite-' + code)
-    const g = room.makeAction('g')
+    const g = room.makeAction('g'), v = room.makeAction('v')
     g.onMessage = (m, { peerId }) => this.receive(m, peerId, g)
-    room.onPeerJoin = id => { if (!this.partner && this.priv?.room === room) this.begin(id, g) }
+    v.onMessage = (d, { peerId, metadata }) => this.receiveVoice(d, metadata, peerId, v)
+    room.onPeerJoin = id => { if (!this.partner && this.priv?.room === room) this.begin(id, g, v) }
     room.onPeerLeave = id => {
       if (id === this.partner && this.game === g) { this.partner = null; this.h.onPartnerGone() }
     }
@@ -153,11 +162,12 @@ export class Net {
     }
   }
 
-  begin(partner, via = this.g) {
+  begin(partner, via = this.g, voice = this.v) {
     clearInterval(this.timer)
     this.pending = this.reserved = null
     this.partner = partner
     this.game = via
+    this.voice = voice
     this.recent.add(partner)
     this.setStatus('busy')
     this.h.onMatch(partner, this.id < partner)
@@ -168,9 +178,14 @@ export class Net {
     if (this.partner) this.game.send(msg, { target: this.partner })
   }
 
+  sendVoice(data, meta) {
+    if (this.partner) return this.voice.send(data, { target: this.partner, metadata: meta })
+  }
+
   endMatch() {
     this.partner = null
     this.game = this.g
+    this.voice = this.v
     this.closePrivate()
     this.setStatus('idle')
   }

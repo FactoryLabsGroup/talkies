@@ -12,5 +12,5 @@ export const CONFIG = {
   TURN: [],
 
   // Bump to start a fresh lobby when the protocol changes, so old tabs don't mix in.
-  LOBBY: 'lobby-v2',
+  LOBBY: 'lobby-v3',
 }

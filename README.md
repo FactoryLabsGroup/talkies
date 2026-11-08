@@ -2,7 +2,14 @@
 
 Meet a stranger. Earn your words. Live at **https://factorylabs.app/talkies/**
 
-Two random strangers start with GIFs only. Once a minute has passed and each has sent at least 3 GIFs, they can switch to text, but only if both agree. [DESIGN.md](DESIGN.md) holds the earlier, longer concept.
+Two random strangers climb four steps, and each step needs both of them to agree:
+
+1. **Wordless:** GIFs only. After a minute, once each has sent 3 GIFs, they can switch to text.
+2. **In words:** text and GIFs. After 90 seconds, once each has sent 5 messages, they can turn on voice.
+3. **By voice:** voice messages, recorded in the browser and sent peer to peer. After 45 seconds, once each has sent one, they can swap contacts.
+4. **Introduced:** each types a contact (Instagram, Telegram…). Nothing is sent until both have entered theirs, then both appear at the same time.
+
+The numbers live in `STAGES` at the top of `app.js`. [DESIGN.md](DESIGN.md) holds the earlier, longer concept.
 
 ## How it works
 
@@ -16,8 +23,8 @@ Two random strangers start with GIFs only. Once a minute has passed and each has
 |---|---|
 | `index.html` | All screens: landing, search, invite, match, end |
 | `style.css` | Look and feel (dark only) |
-| `app.js` | Match: GIF picker, countdown to text, consent, chat, end card |
-| `net.js` | Lobby and matchmaking handshake |
+| `app.js` | Match: the four steps, GIF picker, chat, voice messages, contact swap, end card |
+| `net.js` | Lobby, matchmaking handshake, and the channels messages and voice go through |
 | `i18n.js` | English and Georgian text |
 | `config.js` | Name, URL, GIPHY key, TURN servers |
 
@@ -32,4 +39,4 @@ Two random strangers start with GIFs only. Once a minute has passed and each has
 python3 -m http.server 8765
 ```
 
-Open two tabs at `http://localhost:8765/?fast` and press *Find a stranger* in both. `?fast` shortens the GIF-only part to 10 seconds for testing, and `?lang=en` / `?lang=ka` forces a language.
+Open two tabs at `http://localhost:8765/?fast` and press *Find a stranger* in both. `?fast` shortens every step to 10 seconds and one message each for testing, and `?lang=en` / `?lang=ka` forces a language.

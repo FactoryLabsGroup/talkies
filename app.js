@@ -1,16 +1,27 @@
-import { CONFIG } from './config.js?v=13'
-import { STR, LANGS } from './i18n.js?v=13'
-import { Net } from './net.js?v=13'
+import { CONFIG } from './config.js?v=14'
+import { STR, LANGS } from './i18n.js?v=14'
+import { Net } from './net.js?v=14'
 
-// Talkies: two strangers start with GIFs only. Once a minute has passed and both have sent a few
-// GIFs, they can switch to text, but only if both agree.
+// Talkies: two strangers climb four steps: GIFs only, then words, then voice messages, then
+// swapping contacts. A step opens once enough time has passed and both have sent enough of the
+// current kind of message, and only if both agree.
 
 // ---------------------------------------------------------------- content
 
 const FAST = new URLSearchParams(location.search).has('fast')
-const TEXT_AFTER = FAST ? 10000 : 60000   // how long the GIF-only part lasts at least
-const GIF_NEED = FAST ? 1 : 3              // and how many GIFs each side has to send first
+// kind: which messages count toward opening the next step ('g' GIF, 'w' text, 'v' voice).
+// need: how many of them each side sends. time: how long the step lasts at least.
+const STAGES = [null,
+  { kind: 'g', need: FAST ? 1 : 3, time: FAST ? 10000 : 60000 },
+  { kind: 'w', need: FAST ? 1 : 5, time: FAST ? 10000 : 90000 },
+  { kind: 'v', need: 1, time: FAST ? 10000 : 45000 },
+  { last: true },
+]
+const LAST = STAGES.length - 1
 const TEXT_MAX = 300
+const VOICE_MAX = 30000          // longest voice message, ms
+const VOICE_BYTES = 800 * 1024   // and the largest file accepted
+const CONTACT_MAX = 40
 const AVATARS_HUE = () => Math.floor(Math.random() * 360)
 const REACTIONS = ['❤️', '😂', '😮', '👀']
 // Quick GIF searches. The label is shown in the player's language; the search runs in English,
@@ -52,6 +63,11 @@ const ICONS = {
   search: SVG('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
   s1: SVG('<rect x="2.5" y="5" width="19" height="14" rx="3.5"/><text x="12" y="15.2" text-anchor="middle" font-size="7.2" font-weight="800" fill="currentColor" stroke="none" font-family="Inter, system-ui, sans-serif">GIF</text>', 1.6),
   s2: SVG('<path d="M20 15.5a2 2 0 0 1-2 2H8l-4 3.5V5.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>'),
+  s3: SVG('<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>'),
+  s4: SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>'),
+  play: SVG('<path d="M7.5 4.8v14.4L19 12z" fill="currentColor"/>'),
+  pause: SVG('<path d="M8.5 5v14M15.5 5v14"/>', 3),
+  x: SVG('<path d="M18 6 6 18M6 6l12 12"/>'),
 }
 function icon(name, cls = 'ico') {
   const s = document.createElement('span')
@@ -84,6 +100,7 @@ const flagOf = cc => (/^[A-Z]{2}$/.test(cc || '') ? String.fromCodePoint(...[...
 const myTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || '' } catch { return '' } })()
 const myRegion = TZ_CC[myTz] || ((navigator.language || '').split('-')[1] || '').toUpperCase()
 const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
+const clock = ms => mmss(Math.floor(Math.max(0, ms) / 1000) * 1000)   // elapsed time, rounded down
 const dim = n => (Number.isFinite(+n) && +n > 0 ? Math.min(2000, Math.round(+n)) : 0)
 function hideLinks(s) {
   return s.replace(/(https?:\/\/|www\.)\S+|\b[\w-]+\.(com|net|org|io|me|app|ge|ru|co|gg|ly|tv|xyz|link|site)\b\S*/gi, '🔗 ' + t('link_hidden'))
@@ -108,10 +125,13 @@ function t(key, vars) {
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v)
   return s
 }
+// With a count: uses the `_one` version of the text for 1 when the language has one.
+const tn = (key, n) => t(n === 1 && STR[lang][key + '_one'] != null ? key + '_one' : key, { n })
 function applyLang() {
   document.documentElement.lang = lang
   document.querySelectorAll('[data-i]').forEach(el => (el.textContent = t(el.dataset.i)))
   document.querySelectorAll('[data-ph]').forEach(el => (el.placeholder = t(el.dataset.ph)))
+  document.querySelectorAll('[data-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.aria)))
   $('#langBtn').textContent = lang === 'ka' ? 'English' : 'ქართული'
   renderChips()
   renderCount()
@@ -133,7 +153,7 @@ function show(name) {
 }
 
 // ---------------------------------------------------------------- landing demo
-// A looping make-believe match: a few GIFs back and forth, text unlocks, then words.
+// A looping make-believe match: a few GIFs back and forth, text opens, words, then voice opens.
 
 const giphy = (id, w, h) => ({ gif: `https://media.giphy.com/media/${id}/200.webp`, w, h })
 const W = (en, ka) => ({ text: { en, ka } })
@@ -142,11 +162,14 @@ const DEMO = [
   { who: 'me', ...giphy('3lurIRCIRl8Hyl56TQ', 102, 100) },
   { who: 'them', ...giphy('XHeLeuirRbwptHhSWd', 134, 100) },
   { who: 'me', ...giphy('OK27wINdQS5YQ', 140, 100) },
-  { unlock: true },
+  { unlock: 2 },
   { typing: true },
   { who: 'them', ...W('Okay, words now. Hi!', 'კარგი, ახლა სიტყვებით. გამარჯობა!') },
   { who: 'me', ...W('Hi! Great taste in GIFs', 'გამარჯობა! GIF‑ებში კარგი გემოვნება გაქვს') },
+  { unlock: 3 },
+  { who: 'them', voice: 7 },
 ]
+const DEMO_WAVE = [30, 55, 80, 45, 70, 100, 60, 35, 75, 50, 90, 40, 65, 30, 55, 85, 45, 25, 50, 70]
 let demoRun = 0
 function startDemo() {
   const run = ++demoRun
@@ -164,8 +187,8 @@ function startDemo() {
         if (!alive()) return
         feed.querySelector('.demo-typing')?.closest('.row')?.remove()
         if (step.unlock) {
-          bars.forEach(b => b.classList.add('on'))
-          feed.append(h('div', { class: 'demo-unlock' }, icon('s2'), `${t('unlocked')} · ${t('s2')}`))
+          bars.forEach((b, i) => b.classList.toggle('on', i < step.unlock))
+          feed.append(h('div', { class: 'demo-unlock' }, icon('s' + step.unlock), `${t('unlocked')} · ${t('s' + step.unlock)}`))
         } else if (step.typing) {
           feed.append(h('div', { class: 'row them' }, h('span', { class: 'ava', style: '--hue: 300' }),
             h('div', { class: 'bubble demo-typing' }, h('i'), h('i'), h('i'))))
@@ -179,10 +202,11 @@ function startDemo() {
     }
   })()
 }
-function demoRow({ who, gif, w, h: gh, text }) {
+function demoRow({ who, gif, w, h: gh, text, voice }) {
   const height = 76
   const bubble = gif
     ? h('div', { class: 'bubble has-gif' }, h('img', { class: 'gif-msg', src: gif, width: Math.round(w * height / gh), height, alt: '', referrerpolicy: 'no-referrer' }))
+    : voice ? h('div', { class: 'bubble voice' }, h('span', { class: 'vplay' }, icon('play')), wave(DEMO_WAVE), h('span', { class: 'vtime' }, clock(voice * 1000)))
     : h('div', { class: 'bubble' }, h('span', {}, text[lang]))
   return h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: '--hue: 300' }), bubble)
 }
@@ -221,6 +245,7 @@ const net = new Net({
   onCount: n => { online = n; renderCount(); renderDebug() },
   onMatch: (partner, isHost) => startMatch(partner, isHost),
   onGame: msg => onGame(msg),
+  onVoice: (data, meta) => onVoice(data, meta),
   onPartnerGone: () => endMatch('left'),
 })
 net.start()
@@ -302,20 +327,23 @@ async function share(text, btn) {
 // ---------------------------------------------------------------- match state
 
 let G = null   // the current match (view state, both roles)
-let H = null   // host-only authoritative state: the GIF-only countdown and the text consent
+let H = null   // host-only authoritative state: the step, its countdown, the counts and the consent
 
 function startMatch(partner, isHost) {
   stopSearchUi()
   clearTimeout(joinTimer)
   G = {
     partner, host: isHost, them: null, theyGotMine: false, ended: false, hue: AVATARS_HUE(),
-    view: { stage: 1, left: TEXT_AFTER, ac: false, cons: [false, false], gifs: [0, 0] },
-    leftEnd: now() + TEXT_AFTER, startedAt: now(), connectedAt: 0, maxStage: 1,
-    gifs: [], gifCount: 0, textCount: 0, lastSend: 0, timers: [], gifOpen: true,
+    view: { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0] },
+    leftEnd: now() + STAGES[1].time, startedAt: now(), connectedAt: 0, maxStage: 1,
+    gifs: [], gifCount: 0, textCount: 0, voiceCount: 0, stageCnt: STAGES.map(() => 0),
+    lastSend: 0, timers: [], gifOpen: true, urls: [],
+    swap: { mine: '', theyReady: false, sentMine: false, theirs: '', done: false },
   }
-  H = isHost ? { stage: 1, left: TEXT_AFTER, ac: false, cons: [false, false], gifs: [0, 0], last: now(), lastPush: 0 } : null
+  H = isHost ? { stage: 1, left: STAGES[1].time, ac: false, cons: [false, false], cnt: [0, 0], last: now(), lastPush: 0 } : null
 
   $('#feed').replaceChildren()
+  $('#swap').replaceChildren()
   $('#textIn').value = ''
   document.querySelectorAll('#match .ava').forEach(el => el.style.setProperty('--hue', G.hue))
   document.querySelectorAll('#match .them-info').forEach(el => (el.textContent = ''))
@@ -339,6 +367,9 @@ function clearMatchTimers() {
   if (!G) return
   G.timers.forEach(x => { clearInterval(x); clearTimeout(x) })
   cancelAnimationFrame(G.raf)
+  stopRec(false)
+  playing?.stop()
+  G.urls.forEach(u => URL.revokeObjectURL(u))
 }
 
 // Connection never came up: quietly go back to searching.
@@ -384,7 +415,7 @@ function onGame(m) {
         net.send({ t: 'hi', lang, tz: myTz, cc: myRegion, got: true })
         $('#connecting').hidden = true
         G.connectedAt = now()
-        G.leftEnd = now() + TEXT_AFTER
+        G.leftEnd = now() + STAGES[1].time
         if (H) H.last = now()
         renderThem()
         addIntro()
@@ -401,13 +432,15 @@ function onGame(m) {
       net.send({ t: 'ack', id })
       if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
       addBubble('them', id, tk)
-      if (H && tk[0].k === 'g') hostGif(1)
+      if (H) hostCount(1, tk[0].k)
       break
     }
     case 'ack': $('#feed').querySelector(`.row.me .bubble[data-id="${CSS.escape(String(m.id))}"]`)?.classList.add('sent'); break
     case 'r': if (REACTIONS.includes(m.e)) addReaction(String(m.id), m.e, 'mine'); break
     case 's': if (!H) applyState(m); break
-    case 'ok': if (H) hostConsent(1); break
+    case 'ok': if (H && m.s === H.stage) hostConsent(1); break
+    case 'cx': swapReady(); break
+    case 'ch': swapContact(m.v); break
     case 'bye': endMatch('left'); break
   }
 }
@@ -417,7 +450,7 @@ function onGame(m) {
 function hostTick() {
   if (!G || G.ended || !G.them) return
   const tNow = now()
-  if (H.stage === 1 && H.left > 0) {
+  if (!STAGES[H.stage].last && H.left > 0) {
     H.left -= tNow - H.last
     if (H.left <= 0) { H.left = 0; checkReady(); push() }
   }
@@ -427,27 +460,36 @@ function hostTick() {
 
 function push() {
   H.lastPush = now()
-  const s = { t: 's', stage: H.stage, left: Math.max(0, H.left), ac: H.ac, cons: H.cons, gifs: H.gifs }
+  const s = { t: 's', stage: H.stage, left: Math.max(0, H.left), ac: H.ac, cons: H.cons, cnt: H.cnt }
   net.send(s)
   applyState(s)
 }
 
-// Text can be offered once the minute is up and both sides have sent enough GIFs.
+// The next step can be offered once the time is up and both sides have sent enough.
 function checkReady() {
-  if (H.stage === 1 && !H.ac && H.left <= 0 && H.gifs[0] >= GIF_NEED && H.gifs[1] >= GIF_NEED) H.ac = true
+  const st = STAGES[H.stage]
+  if (!st.last && !H.ac && H.left <= 0 && H.cnt[0] >= st.need && H.cnt[1] >= st.need) H.ac = true
 }
-// idx 0 = the host sent a GIF, 1 = the guest did.
-function hostGif(idx) {
-  if (H.stage !== 1) return
-  H.gifs[idx]++
+// idx 0 = the host sent it, 1 = the guest did. Only the current step's kind of message counts.
+function hostCount(idx, kind) {
+  if (STAGES[H.stage].kind !== kind) return
+  H.cnt = [...H.cnt]
+  H.cnt[idx]++
   checkReady()
   push()
 }
 
 function hostConsent(idx) {
-  if (!H.ac || H.stage > 1) return
+  if (!H.ac) return
+  H.cons = [...H.cons]
   H.cons[idx] = true
-  if (H.cons[0] && H.cons[1]) { H.stage = 2; H.ac = false }
+  if (H.cons[0] && H.cons[1]) {
+    H.stage++
+    H.ac = false
+    H.cons = [false, false]
+    H.cnt = [0, 0]
+    H.left = STAGES[H.stage].time || 0
+  }
   push()
 }
 
@@ -457,19 +499,20 @@ function hostConsent(idx) {
 // sync is never swallowed by buttons being rebuilt under the finger.
 function applyState(s) {
   const prev = G.view
-  const n = i => Math.max(0, Math.min(99, Math.floor(+s.gifs?.[i] || 0)))
-  G.view = { stage: s.stage === 2 ? 2 : 1, left: Math.max(0, +s.left || 0), ac: !!s.ac, cons: [!!s.cons?.[0], !!s.cons?.[1]], gifs: [n(0), n(1)] }
+  const n = i => Math.max(0, Math.min(99, Math.floor(+s.cnt?.[i] || 0)))
+  const stage = Math.max(1, Math.min(LAST, Math.floor(+s.stage || 1)))
+  G.view = { stage, left: Math.max(0, +s.left || 0), ac: !!s.ac && stage < LAST, cons: [!!s.cons?.[0], !!s.cons?.[1]], cnt: [n(0), n(1)] }
   G.leftEnd = now() + G.view.left
-  if (G.view.stage !== prev.stage) {
-    if (G.view.stage > prev.stage) {
-      G.maxStage = 2
-      G.gifOpen = false
-      levelUpFx(2)
+  if (stage !== prev.stage) {
+    if (stage > prev.stage) {
+      G.maxStage = Math.max(G.maxStage, stage)
+      if (stage === 2) G.gifOpen = false
+      levelUpFx(stage)
     }
     return renderAll()
   }
   if (G.view.ac !== prev.ac || String(G.view.cons) !== String(prev.cons)) renderConsent()
-  if (G.view.ac !== prev.ac || String(G.view.gifs) !== String(prev.gifs)) renderNeed()
+  if (G.view.ac !== prev.ac || String(G.view.cnt) !== String(prev.cnt)) { renderNeed(); renderLadder() }
 }
 
 function renderAll() {
@@ -495,47 +538,67 @@ function renderThem() {
   ].filter(Boolean)))
 }
 
-// Two steps: GIFs only, then free chat.
+const mineCnt = () => G.view.cnt[G.host ? 0 : 1]
+const theirCnt = () => G.view.cnt[G.host ? 1 : 0]
+const dots = (n, need) => h('span', { class: 'need-dots' }, Array.from({ length: need }, (_, i) => h('i', { class: i < n ? 'on' : '' })))
+
+// The ladder in the sidebar: what's done, where you are and what it takes to go on, what's next.
 function renderLadder() {
   const v = G.view
-  $('#ladder').replaceChildren(...[1, 2].map(i => {
+  $('#ladder').replaceChildren(...STAGES.slice(1).map((st, j) => {
+    const i = j + 1
     const state = i < v.stage ? 'done' : i === v.stage ? 'now' : 'locked'
+    const desc = state === 'done' ? tn('done_' + i, G.stageCnt[i]) : state === 'locked' ? t('u' + i)
+      : st.last && G.swap.done ? t('swapped') : t('d' + i)
     return h('li', { class: `step-row ${state}` },
       h('span', { class: 'dot' }, icon(state === 'done' ? 'check' : state === 'locked' ? 'lock' : 's' + i)),
-      h('div', {}, h('p', { class: 'name' }, t('s' + i)), h('p', { class: 'desc' }, t('d' + i))))
+      h('div', { class: 'step-body' }, h('p', { class: 'name' }, t('s' + i)), h('p', { class: 'desc' }, desc),
+        state === 'now' && !st.last && needCard()))
   }))
   $('#stageTitle').replaceChildren(icon('s' + v.stage), h('span', {}, t('s' + v.stage)))
   document.body.classList.toggle('text-open', v.stage >= 2)
 }
 
-// Countdown to text, drawn every frame from the last synced value.
+// What it takes to open the next step: a count for each side and the time left.
+function needCard() {
+  const v = G.view, st = STAGES[v.stage]
+  if (v.ac) return h('div', { class: 'need-card ready' }, h('p', { class: 'need-title' }, t('ready_' + v.stage)))
+  const row = (who, n) => h('div', { class: `need-row${n >= st.need ? ' done' : ''}` }, h('span', {}, who), dots(n, st.need))
+  return h('div', { class: 'need-card' },
+    h('p', { class: 'need-title' }, tn('need_' + v.stage, st.need)),
+    row(t('you'), mineCnt()), row(t('stranger'), theirCnt()),
+    h('div', { class: 'need-bar' }, h('i', { id: 'needFill' })),
+    h('div', { class: 'need-row' }, h('span', {}, t('time')), h('span', { id: 'needTime', class: 'need-time' })))
+}
+
+// Countdown to the next step, drawn every frame from the last synced value.
 function drawProgress() {
   if (!G || G.ended) return
-  const v = G.view
-  const left = v.stage >= 2 || v.ac ? 0 : G.them ? Math.max(0, G.leftEnd - now()) : TEXT_AFTER
-  const ready = v.stage >= 2 || v.ac
-  const frac = 1 - left / TEXT_AFTER
-  document.querySelectorAll('#match .fuse-fill').forEach(f => (f.style.transform = `scaleX(${frac})`))
-  const secs = left > 0 || !ready ? mmss(left) : v.stage >= 2 ? t('open') : t('ready')
-  if ($('#fuseSecs').textContent !== secs) $('#fuseSecs').textContent = secs
-  const label = ready ? t('text_word') : t('text_label')
-  if ($('#textLabel').textContent !== label) $('#textLabel').textContent = label
-  const mine = v.gifs[G.host ? 0 : 1]
-  const hint = v.stage >= 2 ? t('d2') : ready ? t('text_ready') : left > 0 ? t('text_in', { time: mmss(left) })
-    : mine < GIF_NEED ? t('need_mine', { n: GIF_NEED - mine }) : t('need_theirs')
+  const v = G.view, st = STAGES[v.stage]
+  const left = st.last || v.ac ? 0 : G.them ? Math.max(0, G.leftEnd - now()) : st.time
+  const frac = st.last ? 1 : 1 - left / st.time
+  document.querySelectorAll('#match .fuse-fill, #needFill').forEach(f => (f.style.transform = `scaleX(${frac})`))
+  const nt = $('#needTime')
+  if (nt) {
+    const s = left > 0 ? mmss(left) : '✓'
+    if (nt.textContent !== s) { nt.textContent = s; nt.classList.toggle('done', left <= 0) }
+  }
+  const mine = mineCnt()
+  const hint = st.last ? (G.swap.done ? t('swapped') : t('d' + v.stage)) : v.ac ? t('ready_' + v.stage)
+    : left > 0 ? t('in_' + v.stage, { time: mmss(left) })
+    : mine < st.need ? tn('more_' + v.stage, st.need - mine) : t('wait_' + v.stage)
   if ($('#meterText').textContent !== hint) $('#meterText').textContent = hint
-  $('#match').classList.toggle('ready', ready)
+  $('#match').classList.toggle('ready', v.ac || !!st.last)
   G.raf = requestAnimationFrame(drawProgress)
 }
 
-// How many GIFs each side has sent toward unlocking text.
+// The same counts as small pills in the header, for phones where the sidebar is hidden.
 function renderNeed() {
-  const v = G.view, el = $('#gifNeed')
-  el.hidden = v.stage >= 2 || v.ac
+  const v = G.view, st = STAGES[v.stage], el = $('#gifNeed')
+  el.hidden = !!st.last || v.ac
   if (el.hidden) return
-  const group = (who, n) => h('span', { class: `need${n >= GIF_NEED ? ' done' : ''}` }, h('span', { class: 'need-who' }, who),
-    h('span', { class: 'need-dots' }, Array.from({ length: GIF_NEED }, (_, i) => h('i', { class: i < n ? 'on' : '' }))))
-  el.replaceChildren(group(t('you'), v.gifs[G.host ? 0 : 1]), group(t('stranger'), v.gifs[G.host ? 1 : 0]))
+  const group = (who, n) => h('span', { class: `need${n >= st.need ? ' done' : ''}` }, h('span', { class: 'need-who' }, who), dots(n, st.need))
+  el.replaceChildren(group(t('you'), mineCnt()), group(t('stranger'), theirCnt()))
 }
 
 // Welcome card at the top of a fresh match.
@@ -546,7 +609,7 @@ function addIntro() {
     h('div', { class: 'intro-orbs' }, h('span', { class: 'ava you' }), h('span', { class: 'intro-link' }), h('span', { class: 'ava', style: `--hue:${G.hue}` })),
     h('p', { class: 'intro-title' }, t('intro_title')),
     h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'}${time ? ' · ' + time : ''}`),
-    h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(TEXT_AFTER / 1000), g: GIF_NEED }))))
+    h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(STAGES[1].time / 1000), g: STAGES[1].need }))))
 }
 
 function renderConsent() {
@@ -556,11 +619,11 @@ function renderConsent() {
   if (!v.ac) return
   const mine = v.cons[G.host ? 0 : 1], theirs = v.cons[G.host ? 1 : 0]
   box.replaceChildren(...[
-    h('span', { class: 'consent-ico' }, icon('s2')),
-    h('div', {}, h('p', {}, mine ? t('consent_wait') : t('consent_ask')), theirs && !mine && h('p', { class: 'them-in' }, t('consent_them'))),
+    h('span', { class: 'consent-ico' }, icon('s' + (v.stage + 1))),
+    h('div', {}, h('p', {}, mine ? t('consent_wait') : t('ask_' + v.stage)), theirs && !mine && h('p', { class: 'them-in' }, t('them_' + v.stage))),
     !mine && h('button', { class: 'btn small', type: 'button', onclick: () => {
       if (H) hostConsent(0)
-      else { net.send({ t: 'ok' }); G.view.cons = [...G.view.cons]; G.view.cons[1] = true; renderConsent() }
+      else { net.send({ t: 'ok', s: v.stage }); G.view.cons = [...G.view.cons]; G.view.cons[1] = true; renderConsent() }
     } }, t('consent_btn'))].filter(Boolean))
 }
 
@@ -581,13 +644,13 @@ function sendTokens(tk) {
   const id = rid()
   net.send({ t: 'm', id, tk })
   addBubble('me', id, tk)
+  if (H) hostCount(0, tk[0].k)
   vibrate(12)
   return true
 }
 
 function sendGif(g) {
   if (!sendTokens([{ k: 'g', v: g.url, w: g.w, h: g.h }])) return
-  if (H) hostGif(0)
   if (G.view.stage >= 2) { G.gifOpen = false; renderComposer() }
 }
 
@@ -601,15 +664,18 @@ function sendText() {
 }
 
 // Composer: the GIF picker is always open while it's GIFs only. Once text is open, the text
-// field takes over and the GIF button opens the picker on demand.
+// field takes over and the GIF button opens the picker on demand. The mic joins at step 3.
 function renderComposer() {
   const textOpen = G.view.stage >= 2
-  $('#tray').hidden = !textOpen
+  $('#tray').hidden = !textOpen || !!rec
+  $('#rec').hidden = !rec
+  $('#micBtn').hidden = G.view.stage < 3
   $('#gifPanel').hidden = textOpen && !G.gifOpen
   $('#gifBtn').classList.toggle('on', G.gifOpen && textOpen)
   $('#gifBtn').setAttribute('aria-expanded', String(G.gifOpen && textOpen))
   if (!$('#gifPanel').hidden && !gifState.loaded) loadGifs()
   updateSend()
+  renderSwap()
 }
 function updateSend() { $('#sendBtn').disabled = !$('#textIn').value.trim() }
 
@@ -622,6 +688,257 @@ $('#gifBtn').addEventListener('click', () => {
   renderComposer()
   if (G.gifOpen) $('#gifSearch').focus({ preventScroll: true })
 })
+
+// ---------------------------------------------------------------- voice messages
+// Recorded in the browser and sent straight to the other person over the same peer-to-peer
+// connection as everything else. Nothing is uploaded anywhere.
+
+const VOICE_TYPES = ['audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus']
+let rec = null          // the recording in progress
+let recStarting = false
+let playing = null      // the voice message playing now: { audio, stop }
+
+async function startRec() {
+  if (!G || G.ended || G.view.stage < 3 || rec || recStarting) return
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return toast(t('mic_none'))
+  recStarting = true
+  playing?.stop()
+  // Made inside the tap so the browser lets it run. It only measures loudness for the waveform.
+  let ctx = null
+  try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch {}
+  let stream
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }) }
+  catch { recStarting = false; ctx?.close(); return toast(t('mic_denied')) }
+  recStarting = false
+  const quit = () => { stream.getTracks().forEach(x => x.stop()); ctx?.close() }
+  if (!G || G.ended || G.view.stage < 3) return quit()
+  const mimeType = VOICE_TYPES.find(x => MediaRecorder.isTypeSupported?.(x))
+  let mr
+  try { mr = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 32000 }) }
+  catch { quit(); return toast(t('mic_none')) }
+
+  const r = rec = { mr, stream, ctx, chunks: [], levels: [], start: now(), send: false, tick: 0 }
+  mr.ondataavailable = e => { if (e.data?.size) r.chunks.push(e.data) }
+  mr.onstop = () => finishRec(r)
+  mr.start(250)
+  let analyser = null, buf = null
+  try {
+    analyser = ctx.createAnalyser()
+    analyser.fftSize = 512
+    ctx.createMediaStreamSource(stream).connect(analyser)
+    buf = new Uint8Array(analyser.fftSize)
+    ctx.resume?.()
+  } catch { analyser = null }
+  const waveEl = $('#recWave')
+  waveEl.replaceChildren()
+  $('#recTime').textContent = clock(0)
+  r.tick = setInterval(() => {
+    const ms = now() - r.start
+    $('#recTime').textContent = clock(ms)
+    let level = 0
+    if (analyser) {
+      analyser.getByteTimeDomainData(buf)
+      let sum = 0
+      for (const b of buf) sum += ((b - 128) / 128) ** 2
+      level = Math.sqrt(sum / buf.length)
+    }
+    r.levels.push(level)
+    const bar = h('i')
+    bar.style.height = `${Math.round(4 + Math.min(1, level * 5) * 20)}px`
+    waveEl.append(bar)
+    while (waveEl.children.length > 60) waveEl.firstElementChild.remove()
+    if (ms >= VOICE_MAX) stopRec(true)
+  }, 100)
+  renderComposer()
+  vibrate(15)
+}
+
+function stopRec(send) {
+  if (!rec) return
+  const r = rec
+  rec = null
+  r.send = send
+  r.dur = Math.min(VOICE_MAX, now() - r.start)
+  clearInterval(r.tick)
+  try { if (r.mr.state !== 'inactive') r.mr.stop() } catch {}
+  r.stream.getTracks().forEach(x => x.stop())
+  try { r.ctx?.close() } catch {}
+  if (G && !G.ended) renderComposer()
+}
+
+function finishRec(r) {
+  if (!r.send || !G || G.ended || r.dur < 600) return
+  const blob = new Blob(r.chunks, { type: r.mr.mimeType || r.chunks[0]?.type || 'audio/webm' })
+  if (!blob.size) return
+  if (blob.size > VOICE_BYTES) return toast(t('voice_big'))
+  sendVoice(blob, r.dur / 1000, peaksOf(r.levels))
+}
+
+// Loudness over time, squeezed into a fixed number of bars (0–100). Sent along with the audio so
+// both sides draw the same waveform without decoding anything.
+function peaksOf(levels, n = 32) {
+  const max = Math.max(0, ...levels)
+  if (max < 0.004) return Array.from({ length: n }, (_, i) => 30 + Math.round(30 * Math.abs(Math.sin(i * 1.7))))
+  return Array.from({ length: n }, (_, i) => {
+    const a = Math.floor(i * levels.length / n), b = Math.max(a + 1, Math.floor((i + 1) * levels.length / n))
+    return Math.max(8, Math.round(100 * Math.max(...levels.slice(a, b)) / max))
+  })
+}
+
+async function sendVoice(blob, d, p) {
+  if (!G || G.ended || !G.them) return
+  const id = rid(), meta = { id, d: Math.round(d * 10) / 10, p, mime: blob.type }
+  addVoice('me', id, URL.createObjectURL(blob), meta)
+  if (H) hostCount(0, 'v')
+  vibrate(12)
+  try { await net.sendVoice(new Uint8Array(await blob.arrayBuffer()), meta) } catch {}
+}
+
+function onVoice(data, meta) {
+  if (!G || G.ended || !meta || typeof meta.id !== 'string') return
+  const size = data?.byteLength ?? data?.size ?? 0
+  if (!size || size > VOICE_BYTES) return
+  const id = meta.id.slice(0, 12)
+  net.send({ t: 'ack', id })
+  if ($('#feed').querySelector(`.row.them .bubble[data-id="${CSS.escape(id)}"]`)) return
+  const mime = /^audio\/(webm|mp4|ogg|mpeg|aac)(;[\w=., -]{0,40})?$/.test(meta.mime || '') ? meta.mime : 'audio/webm'
+  const d = Math.max(0.5, Math.min(VOICE_MAX / 1000 + 1, +meta.d || 0))
+  const p = (Array.isArray(meta.p) ? meta.p : []).slice(0, 48).map(x => Math.max(0, Math.min(100, Math.round(+x || 0))))
+  addVoice('them', id, URL.createObjectURL(new Blob([data], { type: mime.split(';')[0] })), { d, p, mime })
+  if (H) hostCount(1, 'v')
+}
+
+function wave(peaks) {
+  return h('span', { class: 'vwave' }, peaks.map(p => { const i = h('i'); i.style.height = `${Math.round(4 + p * 0.2)}px`; return i }))
+}
+
+function addVoice(who, id, url, { d, p, mime }) {
+  G.urls.push(url)
+  G.voiceCount++
+  countStage('v')
+  const audio = new Audio()
+  audio.preload = 'auto'
+  audio.src = url
+  const btn = h('button', { class: 'vplay', type: 'button', 'aria-label': t('play') }, icon('play'))
+  const bars = wave(p.length ? p : peaksOf([]))
+  const time = h('span', { class: 'vtime' }, clock(Math.round(d) * 1000))
+  const progress = f => [...bars.children].forEach((b, i, all) => b.classList.toggle('on', i < Math.round(f * all.length)))
+  const stop = () => {
+    audio.pause()
+    try { audio.currentTime = 0 } catch {}
+    btn.replaceChildren(icon('play'))
+    progress(0)
+    time.textContent = clock(Math.round(d) * 1000)
+    if (playing?.audio === audio) playing = null
+  }
+  audio.addEventListener('timeupdate', () => {
+    if (playing?.audio !== audio) return
+    progress(Math.min(1, audio.currentTime / d))
+    time.textContent = clock(audio.currentTime * 1000)
+  })
+  audio.addEventListener('ended', stop)
+  btn.addEventListener('click', e => {
+    e.stopPropagation()
+    if (playing?.audio === audio) return stop()
+    playing?.stop()
+    if (mime && !audio.canPlayType(mime.split(';')[0])) return toast(t('voice_cant'))
+    playing = { audio, stop }
+    btn.replaceChildren(icon('pause'))
+    audio.play().catch(() => { stop(); toast(t('voice_cant')) })
+  })
+  addRow(who, id, h('div', { class: 'bubble voice', 'data-id': id }, btn, bars, time))
+}
+
+$('#micBtn').addEventListener('click', startRec)
+$('#recCancel').addEventListener('click', () => stopRec(false))
+$('#recSend').addEventListener('click', () => stopRec(true))
+
+// ---------------------------------------------------------------- contact swap
+// Each side types a contact and at first only says "ready" ('cx'). A contact ('ch') is sent
+// only once both have said ready, so nobody gives theirs away without getting one back.
+
+function renderSwap() {
+  const box = $('#swap'), s = G.swap
+  box.hidden = G.view.stage < LAST || s.done
+  if (box.hidden) return
+  const stale = !box.firstChild || box.dataset.lang !== lang || (s.mine && box.querySelector('.swap-form'))
+  if (stale) {
+    const typed = $('#swapIn')?.value || ''
+    box.dataset.lang = lang
+    box.replaceChildren(...[
+      h('div', { class: 'swap-head' }, h('span', { class: 'consent-ico' }, icon('s4')),
+        h('div', {}, h('p', {}, t('swap_title')), h('p', { class: 'swap-status' }))),
+      !s.mine && h('form', { class: 'swap-form', onsubmit: e => { e.preventDefault(); submitSwap() } },
+        h('input', { class: 'swap-in', id: 'swapIn', type: 'text', maxlength: CONTACT_MAX, autocomplete: 'off', enterkeyhint: 'send', placeholder: t('swap_ph'), 'aria-label': t('swap_title') }),
+        h('button', { class: 'btn', type: 'submit' }, t('swap_btn'))),
+    ].filter(Boolean))
+    if ($('#swapIn')) $('#swapIn').value = typed
+  }
+  const status = box.querySelector('.swap-status')
+  status.textContent = s.mine ? t('swap_wait') : s.theyReady ? t('swap_them') : t('swap_sub')
+  status.classList.toggle('them-in', !s.mine && s.theyReady)
+}
+
+function submitSwap() {
+  const input = $('#swapIn')
+  const v = (input?.value || '').trim().slice(0, CONTACT_MAX)
+  if (!v || !G || G.ended) return input?.focus()
+  G.swap.mine = v
+  net.send({ t: 'cx' })
+  if (G.swap.theyReady) sendContact()
+  renderSwap()
+}
+
+function swapReady() {
+  G.swap.theyReady = true
+  if (G.swap.mine) sendContact()
+  if (G.view.stage >= LAST) renderSwap()
+}
+
+function sendContact() {
+  if (G.swap.sentMine) return
+  G.swap.sentMine = true
+  net.send({ t: 'ch', v: G.swap.mine })
+  checkReveal()
+}
+
+function swapContact(v) {
+  if (typeof v !== 'string' || G.swap.theirs) return
+  v = v.trim().slice(0, CONTACT_MAX)
+  if (!v) return
+  G.swap.theirs = v
+  G.swap.theyReady = true
+  checkReveal()
+}
+
+function checkReveal() {
+  const s = G.swap
+  if (s.done || !s.mine || !s.theirs || !s.sentMine) return
+  s.done = true
+  const line = (who, v, copy) => h('div', { class: 'swap-line' }, h('span', { class: 'who' }, who), h('b', {}, v),
+    copy && h('button', { class: 'copy', type: 'button', onclick: e => copyText(v, e.currentTarget) }, t('copy')))
+  pushFeed(h('div', { class: 'swap-card' },
+    h('p', { class: 'swap-card-title' }, icon('s4'), t('swapped')),
+    line(t('stranger'), s.theirs, true), line(t('you'), s.mine)))
+  renderSwap()
+  renderLadder()
+  confetti()
+  vibrate([30, 50, 30])
+}
+
+async function copyText(v, btn) {
+  try { await navigator.clipboard.writeText(v) } catch { return }
+  btn.textContent = t('copied')
+  setTimeout(() => (btn.textContent = t('copy')), 1500)
+}
+
+function toast(msg) {
+  const el = $('#toast')
+  el.textContent = msg
+  el.hidden = false
+  clearTimeout(toast.t)
+  toast.t = setTimeout(() => (el.hidden = true), 3200)
+}
 
 // ---------------------------------------------------------------- GIF picker
 
@@ -696,6 +1013,14 @@ function addBubble(who, id, tk) {
     bubble.append(h('span', { class: 'w' }, hideLinks(x.v)))
     G.textCount++
   }
+  countStage(x.k)
+  addRow(who, id, bubble)
+}
+
+// Messages of the current step's kind, for the "done" line in the ladder.
+function countStage(kind) { if (STAGES[G.view.stage].kind === kind) G.stageCnt[G.view.stage]++ }
+
+function addRow(who, id, bubble) {
   const row = h('div', { class: `row ${who}` }, who === 'them' && h('span', { class: 'ava', style: `--hue:${G.hue}` }), bubble)
   if (who === 'them') {
     bubble.tabIndex = 0
@@ -750,7 +1075,7 @@ function levelUpFx(stage) {
   clearTimeout(levelUpFx.t)
   levelUpFx.t = setTimeout(() => {
     o.hidden = true
-    if (matchMedia('(hover: hover)').matches) $('#textIn').focus({ preventScroll: true })
+    if (matchMedia('(hover: hover)').matches) (stage === 2 ? $('#textIn') : stage === LAST ? $('#swapIn') : null)?.focus({ preventScroll: true })
   }, 1700)
 }
 
@@ -786,7 +1111,7 @@ function renderPostcard(why) {
       h('span', { class: 'lv-ico' }, icon('s' + G.maxStage)),
       h('div', {}, h('p', { class: 'pc-kicker' }, t('reached')), h('p', { class: 'pc-stage-name' }, t('s' + G.maxStage)))),
     h('div', { class: 'pc-stats' },
-      stat(mmss(dur), t('stat_time')), stat(G.gifCount, t('stat_gifs')), stat(G.textCount, t('stat_texts'))),
+      stat(mmss(dur), t('stat_time')), stat(G.gifCount, t('stat_gifs')), stat(G.textCount, t('stat_texts')), stat(G.voiceCount, t('stat_voice'))),
     G.gifs.length > 0 && h('div', { class: 'pc-story' }, h('p', { class: 'pc-kicker' }, t('story')),
       h('div', { class: 'pc-gifs' }, G.gifs.map(src => h('img', { src, alt: '', referrerpolicy: 'no-referrer' })))),
   ].filter(Boolean))
