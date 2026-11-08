@@ -7,7 +7,7 @@
 // the room the partner is in.
 
 import { joinRoom, selfId } from './vendor/trystero.js'
-import { CONFIG } from './config.js?v=16'
+import { CONFIG } from './config.js?v=17'
 
 const APP_ID = 'factorylabs-talkies'
 const HANDSHAKE_MS = 3000

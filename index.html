@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=16">
-  <script type="module" src="app.js?v=16"></script>
+  <link rel="stylesheet" href="style.css?v=17">
+  <script type="module" src="app.js?v=17"></script>
 </head>
 <body data-screen="landing">
 <div class="glow" aria-hidden="true"></div>
@@ -31,6 +31,7 @@
     <span>Talkies</span>
   </a>
   <div class="nav-right">
+    <button id="meBtn" class="me-btn" type="button" data-aria="profile"><span class="ava me-face"></span><span id="meName" class="me-name"></span></button>
     <button id="langBtn" class="lang" type="button"></button>
   </div>
 </header>
@@ -106,9 +107,9 @@
     <div class="frame">
       <aside class="side">
         <div class="side-block stranger">
-          <span class="ava lg"></span>
+          <span class="ava lg them-face"></span>
           <div class="stranger-info">
-            <p class="label" data-i="stranger"></p>
+            <p id="themName" class="label"></p>
             <p class="them-info"></p>
           </div>
         </div>
@@ -119,7 +120,7 @@
       <div class="chat">
         <div class="chat-head">
           <div class="mobile-top">
-            <div class="chip"><span class="ava"></span><span class="them-info"></span></div>
+            <div class="chip"><span class="ava them-face"></span><span class="them-info"></span></div>
             <button class="btn secondary sm next-btn" type="button"><span data-i="next"></span><span class="ico" data-icon="skip"></span></button>
           </div>
           <div class="fuse mobile-only"><div class="fuse-fill"></div></div>
@@ -132,8 +133,9 @@
           </div>
         </div>
         <div id="video" class="video" hidden>
+          <video id="remoteBg" class="v-bg" autoplay playsinline muted aria-hidden="true"></video>
           <video id="remoteVid" class="v-remote" autoplay playsinline></video>
-          <div id="remoteOff" class="v-off"><span class="ava v-ava"></span><p id="remoteOffText"></p></div>
+          <div id="remoteOff" class="v-off"><span class="ava v-ava them-face"></span><p id="remoteOffText"></p></div>
           <button id="revealBtn" class="v-reveal" type="button" hidden><span class="ico" data-icon="eye"></span><span data-i="video_show"></span></button>
           <span id="themMuted" class="v-muted" hidden><span class="ico" data-icon="micOff"></span></span>
           <div id="localTile" class="v-local" hidden><video id="localVid" autoplay playsinline muted></video></div>
@@ -188,6 +190,33 @@
   </section>
 
 </main>
+<dialog id="profile" class="profile" aria-labelledby="pfTitle">
+  <div class="pf-head">
+    <p id="pfTitle" class="pf-title" data-i="profile"></p>
+    <button class="pf-x" type="button" data-aria="close" data-close><span class="ico" data-icon="x"></span></button>
+  </div>
+  <div class="pf-photo">
+    <span class="ava pf-ava me-face"></span>
+    <div class="pf-photo-btns">
+      <button id="pfUp" class="btn secondary sm" type="button"><span id="pfUpText"></span></button>
+      <button id="pfRm" class="btn ghost sm" type="button" data-i="pf_photo_rm"></button>
+      <input id="pfFile" type="file" accept="image/*" hidden>
+    </div>
+  </div>
+  <p id="pfErr" class="pf-err" data-i="pf_photo_bad" hidden></p>
+  <label class="pf-field"><span class="pf-label" data-i="pf_name"></span>
+    <input id="pfName" class="pf-input" type="text" maxlength="20" autocomplete="off" enterkeyhint="done" data-ph="pf_optional">
+  </label>
+  <div class="pf-field"><span class="pf-label" data-i="pf_gender"></span>
+    <div id="pfGender" class="pf-seg" role="group">
+      <button type="button" data-g="m" data-i="g_m" aria-pressed="false"></button>
+      <button type="button" data-g="f" data-i="g_f" aria-pressed="false"></button>
+      <button type="button" data-g="o" data-i="g_o" aria-pressed="false"></button>
+    </div>
+  </div>
+  <p class="pf-note" data-i="pf_note"></p>
+  <button class="btn primary block" type="button" data-i="pf_done" data-close></button>
+</dialog>
 <div id="confetti" class="confetti" aria-hidden="true"></div>
 <div id="toast" class="toast" role="status" hidden></div>
 </body>

@@ -10,7 +10,9 @@ Two random strangers climb five steps, and each step needs both of them to agree
 4. **Face to face:** video call. Nobody's camera turns on by itself, and the other person's video stays blurred until you tap it, again every time their camera comes back. After a minute they can swap contacts, with or without video.
 5. **Introduced:** each types a contact (Instagram, Telegram…). Nothing is sent until both have entered theirs, then both appear at the same time.
 
-The numbers live in `STAGES` at the top of `app.js`. [DESIGN.md](DESIGN.md) holds the earlier, longer concept.
+The numbers live in `STAGES` at the top of `app.js`.
+
+Everyone can set a name, a gender and a photo from the profile button at the top. All three are optional, saved in the browser only, and shown to the stranger from the start. Without a photo, a face is drawn from a seed that both screens share. [DESIGN.md](DESIGN.md) holds the earlier, longer concept.
 
 ## How it works
 
@@ -40,4 +42,4 @@ The numbers live in `STAGES` at the top of `app.js`. [DESIGN.md](DESIGN.md) hold
 python3 -m http.server 8765
 ```
 
-Open two tabs at `http://localhost:8765/?fast` and press *Find a stranger* in both. `?fast` shortens every step to 10 seconds and one message each for testing, and `?lang=en` / `?lang=ka` forces a language.
+Open two tabs at `http://localhost:8765/?fast` and press *Find a stranger* in both. To give each tab its own profile, open the second one at `http://127.0.0.1:8765/?fast` instead (a different address keeps its own saved data). `?fast` shortens every step to 10 seconds and one message each for testing, and `?lang=en` / `?lang=ka` forces a language.

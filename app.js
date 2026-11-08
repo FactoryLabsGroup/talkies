@@ -1,6 +1,6 @@
-import { CONFIG } from './config.js?v=16'
-import { STR, LANGS } from './i18n.js?v=16'
-import { Net } from './net.js?v=16'
+import { CONFIG } from './config.js?v=17'
+import { STR, LANGS } from './i18n.js?v=17'
+import { Net } from './net.js?v=17'
 
 // Talkies: two strangers climb five steps: GIFs only, then words, voice messages, a video call,
 // and finally swapping contacts. A step opens once enough time has passed and both have sent
@@ -130,8 +130,26 @@ const AVA_PALETTES = [
   ['#B8F2E6', '#FFA69E', '#FAF3DD', '#AED9E0', '#9381FF'],
   ['#F72585', '#B5179E', '#4CC9F0', '#FFD60A', '#7209B7'],
 ]
-const mySeed = rid() + rid()            // my face for as long as the page is open
 const DEMO_SEEDS = ['k1', 'q8']         // the two faces in the landing demo
+
+// My profile: a name, a gender and a photo, all optional and kept on this device only. Without a
+// photo my face is drawn from a seed, which is kept too so the face stays the same next time.
+const NAME_MAX = 20
+const PHOTO_PX = 160               // photos are cropped square and scaled to this size
+const PHOTO_MAX = 48000            // largest photo accepted, as a data URL
+const GENDERS = ['m', 'f', 'o']
+const cleanName = s => [...String(s || '')
+  .replace(/[\p{Cc}​‌‎‏‪-‮⁠-⁤⁦-⁩﻿]/gu, '')
+  .replace(/(https?:\/\/|www\.)\S*/gi, '').replace(/\s+/g, ' ').trim()].slice(0, NAME_MAX).join('').trim()
+const cleanGender = g => (GENDERS.includes(g) ? g : '')
+const cleanPhoto = s => (typeof s === 'string' && s.length <= PHOTO_MAX && /^data:image\/(jpeg|png|webp);base64,[a-z0-9+/]+=*$/i.test(s) ? s : '')
+const profile = (() => {
+  let p = {}
+  try { p = JSON.parse(localStorage.getItem('profile') || '{}') || {} } catch {}
+  return { name: cleanName(p.name), g: cleanGender(p.g), ph: cleanPhoto(p.ph), seed: /^[a-z0-9]{8,24}$/.test(p.seed || '') ? p.seed : rid() + rid() }
+})()
+const saveProfile = () => { try { localStorage.setItem('profile', JSON.stringify(profile)) } catch {} }
+const mySeed = profile.seed
 
 // Same seed, same numbers: a tiny seeded random generator.
 function seeded(seed) {
@@ -153,8 +171,9 @@ function faceSvg(seed) {
   const n = parseInt(skin.slice(1), 16)
   const ink = (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255 > 0.55 ? '#141418' : '#fff'
   const f = x => +x.toFixed(1)
-  const tx = f((r() - 0.5) * 16), ty = f((r() - 0.5) * 14), rot = f((r() - 0.5) * 40), rx = f(12 + r() * 24)
-  const fx = f(tx * 0.6), fy = f(ty * 0.5 + 4), frot = f((r() - 0.5) * 16)
+  // The face sits in the middle and stays whole inside the circle, just a little tilted.
+  const rot = f((r() - 0.5) * 20), rx = f(16 + r() * 14)
+  const fx = f((r() - 0.5) * 4), fy = f(2 + (r() - 0.5) * 3), frot = f((r() - 0.5) * 10)
   const gap = f(9 + r() * 4), round = r() > 0.4, open = r() > 0.5, delay = f(r() * 5)
   const eyes = round
     ? `<circle cx="${f(40 - gap)}" cy="35" r="4"/><circle cx="${f(40 + gap)}" cy="35" r="4"/>`
@@ -165,22 +184,34 @@ function faceSvg(seed) {
   return {
     color: skin,
     svg: `<svg viewBox="0 0 80 80" aria-hidden="true"><rect width="80" height="80" fill="${bg}"/>` +
-      `<rect x="10" y="10" width="60" height="60" rx="${rx}" fill="${skin}" transform="translate(${tx} ${ty}) rotate(${rot} 40 40) translate(40 40) scale(1.15) translate(-40 -40)"/>` +
+      `<rect x="11" y="11" width="58" height="58" rx="${rx}" fill="${skin}" transform="rotate(${rot} 40 40)"/>` +
       `<g fill="${ink}" transform="translate(${fx} ${fy}) rotate(${frot} 40 40)"><g class="eyes" style="animation-delay:-${delay}s">${eyes}</g>${mouth}</g></svg>`,
   }
 }
 
+// face: a seed to draw a face from, or a photo (a data URL); '' leaves the circle empty.
 const faces = new Map()
-function paintAva(el, seed) {
-  if (!seed) { el.replaceChildren(); el.style.removeProperty('--glow'); return el }
-  if (!faces.has(seed)) faces.set(seed, faceSvg(seed))
-  const face = faces.get(seed)
-  el.innerHTML = face.svg
-  el.style.setProperty('--glow', face.color)
+function paintAva(el, face) {
+  if (!face) { el.replaceChildren(); el.style.removeProperty('--glow'); return el }
+  if (face.startsWith('data:')) {
+    el.replaceChildren(h('img', { src: face, alt: '' }))
+    el.style.removeProperty('--glow')
+    return el
+  }
+  if (!faces.has(face)) faces.set(face, faceSvg(face))
+  const f = faces.get(face)
+  el.innerHTML = f.svg
+  el.style.setProperty('--glow', f.color)
   return el
 }
-const ava = (seed, cls) => paintAva(h('span', { class: cls ? `ava ${cls}` : 'ava' }), seed)
-const themSeed = () => G?.them?.av || ''
+const ava = (face, cls) => paintAva(h('span', { class: cls ? `ava ${cls}` : 'ava' }), face)
+const myFace = () => profile.ph || mySeed
+const themFace = () => G?.pf?.ph || G?.them?.av || ''
+// Every circle showing me has the class me-face, every one showing the stranger them-face.
+function repaintFaces() {
+  document.querySelectorAll('.me-face').forEach(el => paintAva(el, myFace()))
+  document.querySelectorAll('.them-face').forEach(el => paintAva(el, themFace()))
+}
 
 // The stranger's face gives a little hop when something from them arrives.
 function hopThem() {
@@ -216,6 +247,8 @@ function applyLang() {
   $('#langBtn').textContent = lang === 'ka' ? 'English' : 'ქართული'
   renderChips()
   renderCount()
+  renderMe()
+  renderPf()
   startDemo()
   if (G && !G.ended) { renderAll(); renderThem() }
 }
@@ -428,8 +461,10 @@ function startMatch(partner, isHost) {
   $('#feed').replaceChildren()
   $('#swap').replaceChildren()
   $('#textIn').value = ''
-  document.querySelectorAll('#match .stranger .ava, #match .chip .ava').forEach(el => paintAva(el, ''))
+  repaintFaces()
   document.querySelectorAll('#match .them-info').forEach(el => (el.textContent = ''))
+  $('#themName').textContent = t('stranger')
+  $('#themName').classList.remove('named')
   $('#connecting').hidden = false
   show('match')
   renderAll()
@@ -454,7 +489,7 @@ function clearMatchTimers() {
   playing?.stop()
   stopVideo(G.partner)
   G.urls.forEach(u => URL.revokeObjectURL(u))
-  $('#remoteVid').srcObject = $('#localVid').srcObject = null
+  $('#remoteVid').srcObject = $('#remoteBg').srcObject = $('#localVid').srcObject = null
   $('#video').hidden = true
   document.body.classList.remove('in-call')
 }
@@ -501,7 +536,8 @@ function onGame(m) {
       if (m.got) G.theyGotMine = true
       if (first) {
         net.send({ t: 'hi', lang, tz: myTz, cc: myRegion, av: mySeed, got: true })
-        document.querySelectorAll('#match .stranger .ava, #match .chip .ava').forEach(el => paintAva(el, G.them.av))
+        sendProfile()
+        repaintFaces()
         $('#connecting').hidden = true
         G.connectedAt = now()
         G.leftEnd = now() + STAGES[1].time
@@ -532,6 +568,7 @@ function onGame(m) {
     case 'cx': swapReady(); break
     case 'ch': swapContact(m.v); break
     case 'cam': onCam(m); break
+    case 'pf': onProfile(m); break
     case 'bye': endMatch('left'); break
   }
 }
@@ -618,17 +655,37 @@ function renderAll() {
 function renderThem() {
   if (!G?.them) return
   const { tz, cc } = G.them
+  const nm = G.pf?.nm || '', g = G.pf?.g ? t('g_' + G.pf.g) : ''
   const time = localTime(tz)
   let sky = ''
   try {
     const hr = +new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: tz || undefined }).format(new Date())
     sky = hr >= 5 && hr < 8 ? '🌅' : hr >= 8 && hr < 17 ? '☀️' : hr >= 17 && hr < 20 ? '🌇' : '🌙'
   } catch {}
+  const sep = () => h('span', { class: 'sep' }, '·')
+  // The phone header has no room for the name above, so it goes first in the line.
   document.querySelectorAll('#match .them-info').forEach(el => el.replaceChildren(...[
+    nm && el.closest('.chip') && h('span', { class: 'nm' }, nm),
+    nm && el.closest('.chip') && sep(),
     h('span', { class: 'flag' }, flagOf(cc) || '🌍'),
-    time && h('span', { class: 'sep' }, '·'),
+    g && sep(),
+    g && h('span', { class: 'g' }, g),
+    time && sep(),
     time && h('span', { class: 'time' }, `${sky} ${time}`),
   ].filter(Boolean)))
+  $('#themName').textContent = nm || t('stranger')
+  $('#themName').classList.toggle('named', !!nm)
+  const sub = $('#feed .intro-sub')
+  if (sub) sub.textContent = introLine()
+}
+const introLine = () => [G.pf?.nm, flagOf(G.them.cc) || '🌍', G.pf?.g && t('g_' + G.pf.g), localTime(G.them.tz)].filter(Boolean).join(' · ')
+
+// The stranger's name, gender and photo: sent once we're connected and again whenever they change.
+const sendProfile = () => net.send({ t: 'pf', nm: profile.name, g: profile.g, ph: profile.ph })
+function onProfile(m) {
+  G.pf = { nm: cleanName(m.nm), g: cleanGender(m.g), ph: cleanPhoto(m.ph) }
+  repaintFaces()
+  renderThem()
 }
 
 const mineCnt = () => G.view.cnt[G.host ? 0 : 1]
@@ -697,12 +754,10 @@ function renderNeed() {
 
 // Welcome card at the top of a fresh match.
 function addIntro() {
-  const { tz, cc } = G.them
-  const time = localTime(tz)
   pushFeed(h('div', { class: 'intro' },
-    h('div', { class: 'intro-orbs' }, ava(mySeed, 'you'), h('span', { class: 'intro-link' }), ava(themSeed())),
+    h('div', { class: 'intro-orbs' }, ava(myFace(), 'you me-face'), h('span', { class: 'intro-link' }), ava(themFace(), 'them-face')),
     h('p', { class: 'intro-title' }, t('intro_title')),
-    h('p', { class: 'intro-sub' }, `${flagOf(cc) || '🌍'}${time ? ' · ' + time : ''}`),
+    h('p', { class: 'intro-sub' }, introLine()),
     h('p', { class: 'intro-hint' }, icon('s1'), t('intro_hint', { n: Math.round(STAGES[1].time / 1000), g: STAGES[1].need }))))
 }
 
@@ -1026,17 +1081,18 @@ function renderVideo() {
   $('#camBtn').hidden = G.view.stage < VIDEO
   $('#camBtn').classList.toggle('on', !!v.local)
   document.body.classList.toggle('in-call', show)
-  const rv = $('#remoteVid'), lv = $('#localVid')
-  if (!show) { rv.srcObject = lv.srcObject = null; return }
+  const rv = $('#remoteVid'), bg = $('#remoteBg'), lv = $('#localVid')
+  if (!show) { rv.srcObject = bg.srcObject = lv.srcObject = null; return }
 
+  // Their whole picture is shown; a blurred, muted copy of it fills the space around it.
   const remote = v.them.on ? v.remote : null
-  if (rv.srcObject !== remote) { rv.srcObject = remote; if (remote) rv.play().catch(() => {}) }
+  for (const el of [rv, bg]) if (el.srcObject !== remote) { el.srcObject = remote; if (remote) el.play().catch(() => {}) }
   const seeing = !!(remote && v.them.cam)
   box.classList.toggle('blurred', seeing && !v.revealed)
   $('#revealBtn').hidden = !seeing || v.revealed
   $('#remoteOff').hidden = seeing
   if (!seeing) {
-    paintAva($('#remoteOff .ava'), themSeed())
+    paintAva($('#remoteOff .ava'), themFace())
     $('#remoteOffText').textContent = v.them.on ? t('cam_off_them') : t('video_wait')
   }
   $('#themMuted').hidden = !(v.them.on && !v.them.mic)
@@ -1060,12 +1116,22 @@ $('#vCam').addEventListener('click', () => toggleTrack('cam'))
 $('#revealBtn').addEventListener('click', () => {
   if (!G) return
   G.video.revealed = G.video.saw = true
-  $('#remoteVid').play().catch(() => {})
+  playRemote()
   renderVideo()
   renderLadder()
 })
 // Some browsers only play sound after a tap on the page.
-$('#video').addEventListener('click', () => { const rv = $('#remoteVid'); if (rv.srcObject && rv.paused) rv.play().catch(() => {}) })
+function playRemote() { for (const el of [$('#remoteVid'), $('#remoteBg')]) if (el.srcObject && el.paused) el.play().catch(() => {}) }
+$('#video').addEventListener('click', playRemote)
+// My own picture keeps the camera's shape, so I see all of what the stranger sees.
+function fitLocal() {
+  const lv = $('#localVid'), w = lv.videoWidth, hh = lv.videoHeight
+  if (!w || !hh) return
+  $('#localTile').style.aspectRatio = `${w} / ${hh}`
+  $('#localTile').classList.toggle('tall', hh > w)
+}
+$('#localVid').addEventListener('loadedmetadata', fitLocal)
+$('#localVid').addEventListener('resize', fitLocal)
 
 // ---------------------------------------------------------------- contact swap
 // Each side types a contact and at first only says "ready" ('cx'). A contact ('ch') is sent
@@ -1129,11 +1195,11 @@ function checkReveal() {
   const s = G.swap
   if (s.done || !s.mine || !s.theirs || !s.sentMine) return
   s.done = true
-  const line = (seed, who, v, copy) => h('div', { class: 'swap-line' }, ava(seed), h('span', { class: 'who' }, who), h('b', {}, v),
+  const line = (face, cls, who, v, copy) => h('div', { class: 'swap-line' }, ava(face, cls), h('span', { class: 'who' }, who), h('b', {}, v),
     copy && h('button', { class: 'copy', type: 'button', onclick: e => copyText(v, e.currentTarget) }, t('copy')))
   pushFeed(h('div', { class: 'swap-card' },
     h('p', { class: 'swap-card-title' }, icon('s' + LAST), t('swapped')),
-    line(themSeed(), t('stranger'), s.theirs, true), line(mySeed, t('you'), s.mine)))
+    line(themFace(), 'them-face', G.pf?.nm || t('stranger'), s.theirs, true), line(myFace(), 'me-face', t('you'), s.mine)))
   renderSwap()
   renderLadder()
   confetti()
@@ -1235,7 +1301,7 @@ function addBubble(who, id, tk) {
 function countStage(kind) { if (STAGES[G.view.stage].kind === kind) G.stageCnt[G.view.stage]++ }
 
 function addRow(who, id, bubble) {
-  const row = h('div', { class: `row ${who}` }, who === 'them' && ava(themSeed()), bubble)
+  const row = h('div', { class: `row ${who}` }, who === 'them' && ava(themFace(), 'them-face'), bubble)
   if (who === 'them') {
     bubble.tabIndex = 0
     bubble.setAttribute('role', 'button')
@@ -1317,9 +1383,9 @@ function renderPostcard(why) {
     h('p', { class: 'pc-kicker' }, t('the_end')),
     h('p', { class: 'pc-end' }, t('end_' + why)),
     h('div', { class: 'pc-pair' },
-      ava(mySeed, 'you'),
+      ava(myFace(), 'you me-face'),
       h('span', { class: 'pc-amp' }, '+'),
-      ava(themSeed()),
+      ava(themFace(), 'them-face'),
       h('span', { class: 'pc-flag' }, flagOf(G.them?.cc) || '🌍')),
     h('div', { class: 'pc-stage' },
       h('span', { class: 'lv-ico' }, icon('s' + G.maxStage)),
@@ -1333,10 +1399,84 @@ function renderPostcard(why) {
 }
 const stat = (n, label) => h('div', { class: 'stat' }, h('b', {}, String(n)), h('span', {}, label))
 
+// ---------------------------------------------------------------- my profile
+// Opened from the button at the top, any time. Changes are saved on this device straight away
+// and sent to the stranger when the window closes.
+
+let pfDirty = false
+
+function renderMe() {
+  $('#meName').textContent = profile.name || t('profile')
+  repaintFaces()
+}
+
+function renderPf() {
+  $('#pfUpText').textContent = t(profile.ph ? 'pf_photo_change' : 'pf_photo_up')
+  $('#pfRm').hidden = !profile.ph
+  document.querySelectorAll('#pfGender button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === profile.g)))
+}
+
+function pfChanged() {
+  pfDirty = true
+  saveProfile()
+  renderMe()
+  renderPf()
+}
+
+// Crop to a square from the middle and shrink, so the photo is small enough to send.
+async function squarePhoto(file) {
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url })
+    const w = img.naturalWidth, hh = img.naturalHeight, side = Math.min(w, hh)
+    if (!side) throw new Error('empty image')
+    const c = h('canvas', { width: PHOTO_PX, height: PHOTO_PX }), x = c.getContext('2d')
+    x.fillStyle = '#222229'
+    x.fillRect(0, 0, PHOTO_PX, PHOTO_PX)
+    x.drawImage(img, (w - side) / 2, (hh - side) / 2, side, side, 0, 0, PHOTO_PX, PHOTO_PX)
+    for (const q of [0.85, 0.7, 0.55, 0.4]) { const out = cleanPhoto(c.toDataURL('image/jpeg', q)); if (out) return out }
+    throw new Error('photo too large')
+  } finally { URL.revokeObjectURL(url) }
+}
+
+$('#meBtn').addEventListener('click', () => {
+  $('#pfName').value = profile.name
+  $('#pfErr').hidden = true
+  renderPf()
+  $('#profile').showModal()
+})
+$('#profile').addEventListener('click', e => {
+  // A tap on the dimmed background, the cross or Done closes it.
+  if (e.target === e.currentTarget || e.target.closest('[data-close]')) e.currentTarget.close()
+})
+$('#profile').addEventListener('close', () => {
+  if (pfDirty && G?.them && !G.ended) sendProfile()
+  pfDirty = false
+})
+$('#pfName').addEventListener('input', e => { profile.name = cleanName(e.target.value); pfChanged() })
+$('#pfName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#profile').close() } })
+$('#pfGender').addEventListener('click', e => {
+  const b = e.target.closest('button[data-g]')
+  if (!b) return
+  profile.g = profile.g === b.dataset.g ? '' : b.dataset.g   // tap the chosen one again to clear it
+  pfChanged()
+})
+$('#pfUp').addEventListener('click', () => $('#pfFile').click())
+$('#pfFile').addEventListener('change', async e => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+  $('#pfErr').hidden = true
+  try { profile.ph = await squarePhoto(file) } catch { $('#pfErr').hidden = false; return }
+  pfChanged()
+})
+$('#pfRm').addEventListener('click', () => { profile.ph = ''; pfChanged() })
+
 // ---------------------------------------------------------------- boot
 
 hydrateIcons()
 document.querySelectorAll('.demo-avas .ava').forEach((el, i) => paintAva(el, DEMO_SEEDS[i]))
+saveProfile()   // keeps my face's seed for next time
 applyLang()
 const inviteCode = new URLSearchParams(location.search).get('invite')
 if (/^[a-z0-9]{6,20}$/.test(inviteCode || '')) joinInvite(inviteCode)

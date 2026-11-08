@@ -114,6 +114,20 @@ export const STR = {
     copied: 'Copied',
     share_text: 'I met a stranger on {brand}. We started with GIFs only.', // {brand} = app name
     link_hidden: 'link hidden',
+
+    // My profile: the button at the top and the window it opens
+    profile: 'Profile',                                    // top button when no name is set; window title
+    pf_photo_up: 'Upload photo',
+    pf_photo_change: 'Change photo',
+    pf_photo_rm: 'Remove photo',                           // goes back to the drawn face
+    pf_photo_bad: 'Couldn’t open that image. Try another one',
+    pf_name: 'Name',
+    pf_optional: 'Optional',                               // name field placeholder
+    pf_gender: 'Gender',
+    g_m: 'Man', g_f: 'Woman', g_o: 'Other',               // also shown next to the stranger's flag
+    pf_note: 'Everything here is optional. Strangers see what you fill in, and it’s saved on this device only.',
+    pf_done: 'Done',
+    close: 'Close',                                        // accessibility label of the cross
   },
   ka: {
     tagline: 'გაიცანით უცნობი. დაიმსახურეთ სიტყვები.',
@@ -214,5 +228,18 @@ export const STR = {
     copied: 'დაკოპირდა',
     share_text: '{brand}-ზე უცნობი გავიცანი. მხოლოდ GIF‑ებით დავიწყეთ.',
     link_hidden: 'ბმული დამალულია',
+
+    profile: 'პროფილი',
+    pf_photo_up: 'ფოტოს ატვირთვა',
+    pf_photo_change: 'ფოტოს შეცვლა',
+    pf_photo_rm: 'ფოტოს წაშლა',
+    pf_photo_bad: 'სურათი ვერ გაიხსნა. სცადეთ სხვა',
+    pf_name: 'სახელი',
+    pf_optional: 'არასავალდებულო',
+    pf_gender: 'სქესი',
+    g_m: 'კაცი', g_f: 'ქალი', g_o: 'სხვა',
+    pf_note: 'ყველა ველი არასავალდებულოა. უცნობები დაინახავენ, რასაც აქ შეავსებთ. მონაცემები მხოლოდ ამ მოწყობილობაზე ინახება.',
+    pf_done: 'მზადაა',
+    close: 'დახურვა',
   },
 }
